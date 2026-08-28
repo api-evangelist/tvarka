@@ -1,6 +1,6 @@
-generated: '2026-08-09'
-method: derived
-source: arazzo/*.yml
+x-generated: '2026-08-09'
+x-method: derived
+x-source: arazzo/*.yml
 workflows:
   - file: tvarka-atk-api-authenticate-eid-card.yml
     workflowId: authenticate-eid-card

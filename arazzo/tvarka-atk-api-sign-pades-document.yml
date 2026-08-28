@@ -6,111 +6,111 @@ info:
     certificate, return the signature, check both result axes, then download the signed PDF.
   version: 1.0.0
 sourceDescriptions:
-  - name: tvarkaAtk
-    url: ../openapi/tvarka-atk-api-openapi-original.json
-    type: openapi
+- name: signApi
+  url: ../openapi/tvarka-atk-api-sign-api-openapi.yml
+  type: openapi
 workflows:
-  - workflowId: sign-pades-document
-    summary: Produce and download a qualified PAdES signature over a PDF.
-    description: >-
-      Seed `document` with the published sandbox fixture atk-test.pdf (SHA-256
-      b0966e87751a6443f9e6894b3ccb91afdf784343ca0845fec20194e4d44b638f) so a fork runs against test
-      material. A completed signature has legal effect - run this only with explicit human intent.
-    inputs:
-      type: object
-      required: [document]
-      properties:
-        document:
-          type: string
-          description: Base64 PDF bytes. Sandbox fixture - https://atk.tvarka.pro/docs/test-data/
-        method:
-          type: string
-          enum: [physical, nfc]
-          default: physical
-    steps:
-      - stepId: create-sign-request
-        description: Backend, HTTP Basic.
-        operationId: createSignRequest
-        requestBody:
-          contentType: application/json
-          payload:
-            format: pades
-            method: $inputs.method
-            document: $inputs.document
-        successCriteria:
-          - condition: $statusCode == 202
-        outputs:
-          requestId: $response.body#/requestId
-          clientToken: $response.body#/clientToken
-          verificationCode: $response.body#/verificationCode
-      - stepId: submit-sign-certificate
-        description: Device, clientToken. Returns the data-to-be-signed for the PAdES signature.
-        operationId: submitSignCertificate
-        parameters:
-          - name: requestId
-            in: path
-            value: $steps.create-sign-request.outputs.requestId
-        requestBody:
-          contentType: application/json
-          payload:
-            certificate: $inputs.certificate
-        successCriteria:
-          - condition: $statusCode == 200
-        outputs:
-          dtbs: $response.body#/dtbs
-          operationToken: $response.body#/operationToken
-      - stepId: complete-sign
-        description: Device, clientToken. Assembles the container and returns the download token.
-        operationId: completeSign
-        parameters:
-          - name: requestId
-            in: path
-            value: $steps.create-sign-request.outputs.requestId
-        requestBody:
-          contentType: application/json
-          payload:
-            signature: $inputs.signature
-            signatureAlgorithm: ES256
-            operationToken: $steps.submit-sign-certificate.outputs.operationToken
-        successCriteria:
-          - condition: $statusCode == 200
-          - condition: $response.body#/status == "done"
-        outputs:
-          status: $response.body#/status
-          validation: $response.body#/validation
-          downloadToken: $response.body#/downloadToken
-      - stepId: check-validation-axis
-        description: >-
-          Read BOTH axes. status says the ceremony finished; validation.status says whether the
-          signature is qualified and valid. Validation failure never appears on status.
-        operationId: getSignRequest
-        parameters:
-          - name: requestId
-            in: path
-            value: $steps.create-sign-request.outputs.requestId
-        successCriteria:
-          - condition: $statusCode == 200
-          - condition: $response.body#/validation/status == "passed"
-        outputs:
-          validationStatus: $response.body#/validation/status
-          validationLevel: $response.body#/validation/level
-      - stepId: download-container
-        description: Download the signed PAdES container with the one-off download token.
-        operationId: downloadSignedDocument
-        parameters:
-          - name: requestId
-            in: path
-            value: $steps.create-sign-request.outputs.requestId
-          - name: downloadToken
-            in: query
-            value: $steps.complete-sign.outputs.downloadToken
-        successCriteria:
-          - condition: $statusCode == 200
+- workflowId: sign-pades-document
+  summary: Produce and download a qualified PAdES signature over a PDF.
+  description: >-
+    Seed `document` with the published sandbox fixture atk-test.pdf (SHA-256
+    b0966e87751a6443f9e6894b3ccb91afdf784343ca0845fec20194e4d44b638f) so a fork runs against test
+    material. A completed signature has legal effect - run this only with explicit human intent.
+  inputs:
+    type: object
+    required: [document]
+    properties:
+      document:
+        type: string
+        description: Base64 PDF bytes. Sandbox fixture - https://atk.tvarka.pro/docs/test-data/
+      method:
+        type: string
+        enum: [physical, nfc]
+        default: physical
+  steps:
+  - stepId: create-sign-request
+    description: Backend, HTTP Basic.
+    operationId: createSignRequest
+    requestBody:
+      contentType: application/json
+      payload:
+        format: pades
+        method: $inputs.method
+        document: $inputs.document
+    successCriteria:
+    - condition: $statusCode == 202
     outputs:
-      requestId: $steps.create-sign-request.outputs.requestId
-      status: $steps.complete-sign.outputs.status
-      validationStatus: $steps.check-validation-axis.outputs.validationStatus
-      validationLevel: $steps.check-validation-axis.outputs.validationLevel
+      requestId: $response.body#/requestId
+      clientToken: $response.body#/clientToken
+      verificationCode: $response.body#/verificationCode
+  - stepId: submit-sign-certificate
+    description: Device, clientToken. Returns the data-to-be-signed for the PAdES signature.
+    operationId: submitSignCertificate
+    parameters:
+    - name: requestId
+      in: path
+      value: $steps.create-sign-request.outputs.requestId
+    requestBody:
+      contentType: application/json
+      payload:
+        certificate: $inputs.certificate
+    successCriteria:
+    - condition: $statusCode == 200
+    outputs:
+      dtbs: $response.body#/dtbs
+      operationToken: $response.body#/operationToken
+  - stepId: complete-sign
+    description: Device, clientToken. Assembles the container and returns the download token.
+    operationId: completeSign
+    parameters:
+    - name: requestId
+      in: path
+      value: $steps.create-sign-request.outputs.requestId
+    requestBody:
+      contentType: application/json
+      payload:
+        signature: $inputs.signature
+        signatureAlgorithm: ES256
+        operationToken: $steps.submit-sign-certificate.outputs.operationToken
+    successCriteria:
+    - condition: $statusCode == 200
+    - condition: $response.body#/status == "done"
+    outputs:
+      status: $response.body#/status
+      validation: $response.body#/validation
+      downloadToken: $response.body#/downloadToken
+  - stepId: check-validation-axis
+    description: >-
+      Read BOTH axes. status says the ceremony finished; validation.status says whether the
+      signature is qualified and valid. Validation failure never appears on status.
+    operationId: getSignRequest
+    parameters:
+    - name: requestId
+      in: path
+      value: $steps.create-sign-request.outputs.requestId
+    successCriteria:
+    - condition: $statusCode == 200
+    - condition: $response.body#/validation/status == "passed"
+    outputs:
+      validationStatus: $response.body#/validation/status
+      validationLevel: $response.body#/validation/level
+  - stepId: download-container
+    description: Download the signed PAdES container with the one-off download token.
+    operationId: downloadSignedDocument
+    parameters:
+    - name: requestId
+      in: path
+      value: $steps.create-sign-request.outputs.requestId
+    - name: downloadToken
+      in: query
+      value: $steps.complete-sign.outputs.downloadToken
+    successCriteria:
+    - condition: $statusCode == 200
+  outputs:
+    requestId: $steps.create-sign-request.outputs.requestId
+    status: $steps.complete-sign.outputs.status
+    validationStatus: $steps.check-validation-axis.outputs.validationStatus
+    validationLevel: $steps.check-validation-axis.outputs.validationLevel
 x-provenance:
   generated: '2026-08-09'
   method: generated

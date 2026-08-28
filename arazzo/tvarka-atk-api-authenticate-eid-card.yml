@@ -6,106 +6,109 @@ info:
     the card certificate, return the card signature, and read the verified identity.
   version: 1.0.0
 sourceDescriptions:
-  - name: tvarkaAtk
-    url: ../openapi/tvarka-atk-api-openapi-original.json
-    type: openapi
+- name: authApi
+  url: ../openapi/tvarka-atk-api-auth-api-openapi.yml
+  type: openapi
+- name: wellKnownApi
+  url: ../openapi/tvarka-atk-api-well-known-api-openapi.yml
+  type: openapi
 workflows:
-  - workflowId: authenticate-eid-card
-    summary: Authenticate a card holder and retrieve the verified identity.
-    description: >-
-      Steps 1 runs on your backend with HTTP Basic. Steps 2 and 3 run on the device that reads the
-      card, using only the request-scoped clientToken returned by step 1. CAN and PIN entry happen
-      out of band on the device between steps 2 and 3.
-    inputs:
-      type: object
-      required: [audience, method]
-      properties:
-        audience:
-          type: string
-          description: An origin already approved for your provider; anything else returns 403 origin_not_allowed.
-          example: https://app.example.lt
-        method:
-          type: string
-          enum: [physical, nfc]
-          example: physical
-        webhookUrl:
-          type: string
-          description: Optional - receive the terminal state instead of polling.
-    steps:
-      - stepId: create-request
-        description: Backend, HTTP Basic. Returns the requestId, clientToken, nonce and verificationCode.
-        operationId: createAuthRequest
-        requestBody:
-          contentType: application/json
-          payload:
-            audience: $inputs.audience
-            method: $inputs.method
-        successCriteria:
-          - condition: $statusCode == 202
-        outputs:
-          requestId: $response.body#/requestId
-          clientToken: $response.body#/clientToken
-          nonce: $response.body#/nonce
-          verificationCode: $response.body#/verificationCode
-      - stepId: submit-certificate
-        description: >-
-          Device, clientToken. Send the base64 DER authentication certificate read from the card;
-          receive the exact data-to-be-signed and a one-shot operationToken.
-        operationId: submitAuthCertificate
-        parameters:
-          - name: requestId
-            in: path
-            value: $steps.create-request.outputs.requestId
-        requestBody:
-          contentType: application/json
-          payload:
-            certificate: $inputs.certificate
-        successCriteria:
-          - condition: $statusCode == 200
-        outputs:
-          dtbs: $response.body#/dtbs
-          dtbsHashAlgOid: $response.body#/dtbsHashAlgOid
-          operationToken: $response.body#/operationToken
-          cert: $response.body#/cert
-      - stepId: complete
-        description: >-
-          Device, clientToken. Return the raw card signature over dtbs, unmodified. The
-          operationToken is single-use.
-        operationId: completeAuth
-        parameters:
-          - name: requestId
-            in: path
-            value: $steps.create-request.outputs.requestId
-        requestBody:
-          contentType: application/json
-          payload:
-            signature: $inputs.signature
-            signatureAlgorithm: ES256
-            operationToken: $steps.submit-certificate.outputs.operationToken
-        successCriteria:
-          - condition: $statusCode == 200
-          - condition: $response.body#/status == "done"
-        outputs:
-          status: $response.body#/status
-          sig: $response.body#/sig
-          cert: $response.body#/cert
-          assertion: $response.body#/assertion
-      - stepId: fetch-verification-keys
-        description: >-
-          Fetch the JWKS so the optional assertion JWT can be verified independently. This operation
-          is served from the host root, outside the /v1 base path.
-        operationId: getJwks
-        successCriteria:
-          - condition: $statusCode == 200
-        outputs:
-          keys: $response.body#/keys
+- workflowId: authenticate-eid-card
+  summary: Authenticate a card holder and retrieve the verified identity.
+  description: >-
+    Steps 1 runs on your backend with HTTP Basic. Steps 2 and 3 run on the device that reads the
+    card, using only the request-scoped clientToken returned by step 1. CAN and PIN entry happen
+    out of band on the device between steps 2 and 3.
+  inputs:
+    type: object
+    required: [audience, method]
+    properties:
+      audience:
+        type: string
+        description: An origin already approved for your provider; anything else returns 403 origin_not_allowed.
+        example: https://app.example.lt
+      method:
+        type: string
+        enum: [physical, nfc]
+        example: physical
+      webhookUrl:
+        type: string
+        description: Optional - receive the terminal state instead of polling.
+  steps:
+  - stepId: create-request
+    description: Backend, HTTP Basic. Returns the requestId, clientToken, nonce and verificationCode.
+    operationId: createAuthRequest
+    requestBody:
+      contentType: application/json
+      payload:
+        audience: $inputs.audience
+        method: $inputs.method
+    successCriteria:
+    - condition: $statusCode == 202
     outputs:
-      requestId: $steps.create-request.outputs.requestId
-      status: $steps.complete.outputs.status
-      certificate: $steps.complete.outputs.cert
-      signature: $steps.complete.outputs.sig
-      assertion: $steps.complete.outputs.assertion
-      jwks: $steps.fetch-verification-keys.outputs.keys
+      requestId: $response.body#/requestId
+      clientToken: $response.body#/clientToken
+      nonce: $response.body#/nonce
+      verificationCode: $response.body#/verificationCode
+  - stepId: submit-certificate
+    description: >-
+      Device, clientToken. Send the base64 DER authentication certificate read from the card;
+      receive the exact data-to-be-signed and a one-shot operationToken.
+    operationId: submitAuthCertificate
+    parameters:
+    - name: requestId
+      in: path
+      value: $steps.create-request.outputs.requestId
+    requestBody:
+      contentType: application/json
+      payload:
+        certificate: $inputs.certificate
+    successCriteria:
+    - condition: $statusCode == 200
+    outputs:
+      dtbs: $response.body#/dtbs
+      dtbsHashAlgOid: $response.body#/dtbsHashAlgOid
+      operationToken: $response.body#/operationToken
+      cert: $response.body#/cert
+  - stepId: complete
+    description: >-
+      Device, clientToken. Return the raw card signature over dtbs, unmodified. The
+      operationToken is single-use.
+    operationId: completeAuth
+    parameters:
+    - name: requestId
+      in: path
+      value: $steps.create-request.outputs.requestId
+    requestBody:
+      contentType: application/json
+      payload:
+        signature: $inputs.signature
+        signatureAlgorithm: ES256
+        operationToken: $steps.submit-certificate.outputs.operationToken
+    successCriteria:
+    - condition: $statusCode == 200
+    - condition: $response.body#/status == "done"
+    outputs:
+      status: $response.body#/status
+      sig: $response.body#/sig
+      cert: $response.body#/cert
+      assertion: $response.body#/assertion
+  - stepId: fetch-verification-keys
+    description: >-
+      Fetch the JWKS so the optional assertion JWT can be verified independently. This operation
+      is served from the host root, outside the /v1 base path.
+    operationId: getJwks
+    successCriteria:
+    - condition: $statusCode == 200
+    outputs:
+      keys: $response.body#/keys
+  outputs:
+    requestId: $steps.create-request.outputs.requestId
+    status: $steps.complete.outputs.status
+    certificate: $steps.complete.outputs.cert
+    signature: $steps.complete.outputs.sig
+    assertion: $steps.complete.outputs.assertion
+    jwks: $steps.fetch-verification-keys.outputs.keys
 x-verification: >-
   Do not treat status "done" as proof. Re-derive the atk-auth-v1 challenge from your own audience and
   the nonce from step 1, verify sig against cert, and verify the assertion JWT against the JWKS from
