@@ -7,6 +7,18 @@ description: >-
   ASiC-E, ADOC or detached CAdES artifacts with a qualified timestamp and an advisory validation axis. eIDAS-aligned
   and EU-resident, operated from Lithuania by Advokato M. Kiskio kontora INVENT and Socialiniai algoritmai, UAB, and
   priced per successful operation with no subscription or minimum.
+deliveryModel:
+  model: saas
+  open_source: false
+  commercial: true
+  callable_host: true
+  label: Hosted service · you call their endpoint
+  confidence: high
+  source:
+  - openapi
+  - pricing
+  generated: '2026-08-28'
+  method: derived
 image: https://tvarka.pro/static/img/tvarka-logo-closer.53b2d1b2a9b0.svg
 url: https://raw.githubusercontent.com/api-evangelist/tvarka-atk-api/refs/heads/main/apis.yml
 created: '2026-08-02'
