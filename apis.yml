@@ -214,7 +214,7 @@ apis:
   humanURL: https://atk.tvarka.pro/docs/
   baseURL: https://atk.tvarka.pro/v1
   tags:
-  - .well Known
+  - Well-known
   tags_raw:
   - Well-known
   properties:
