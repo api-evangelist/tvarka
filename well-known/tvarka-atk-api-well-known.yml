@@ -1,72 +1,95 @@
-generated: '2026-08-09'
+generated: '2026-08-31'
 method: searched
 source: live probes of /.well-known/* on every apis.yml + OpenAPI servers[] host
+probed: '2026-08-31'
+note: >-
+  Re-probed 2026-08-31 across all three provider hosts, including the newly discovered
+  sign-api.tvarka.pro. One change since the 2026-08-09 sweep: tvarka.pro now SERVES an RFC 9116
+  security.txt (404 last time). Every other named path still 404s. Each host was given a
+  negative-control probe at a path that cannot exist; all three returned 404, so none of them is a
+  path-echoing or SPA catch-all host and the hits below are real documents.
+hit_count: 2
+path_echo_control: passed
 hosts:
+  - host: https://tvarka.pro
+    role: company site, terms, privacy, security page, llms.txt
+    documents:
+      - path: /.well-known/security.txt
+        status: 200
+        file: tvarka-security.txt
+        content_type: text/plain
+        bytes: 182
+        note: >-
+          RFC 9116. Contact mailto:info@tvarka.pro, Expires 2027-08-30T00:00:00Z, Preferred-Languages
+          lt/en, Canonical https://tvarka.pro/.well-known/security.txt, Policy
+          https://tvarka.pro/saugumas/. NEW since the 2026-08-09 probe, which recorded 404.
+      - {path: /.well-known/openid-configuration, status: 404}
+      - {path: /.well-known/oauth-authorization-server, status: 404}
+      - {path: /.well-known/oauth-protected-resource, status: 404}
+      - {path: /.well-known/api-catalog, status: 404}
+      - {path: /.well-known/ai-plugin.json, status: 404}
+      - {path: /.well-known/ucp.json, status: 404}
+      - {path: /.well-known/acp.json, status: 404}
+      - {path: /.well-known/aauth-resource.json, status: 404}
+      - {path: /.well-known/agent-card.json, status: 404}
+      - {path: /.well-known/agent.json, status: 404}
+      - {path: /.well-known/tvarka-negative-control-7f3ab91c.json, status: 404, control: true}
   - host: https://atk.tvarka.pro
+    role: ATK API + developer portal
     documents:
       - path: /.well-known/atk-jwks.json
         status: 200
         file: tvarka-atk-api-atk-jwks.json
+        content_type: application/json
         note: >-
-          Provider-specific JWKS (RFC 7517) publishing the ES256 public key used to verify the
-          optional identity assertion JWT. Declared in the OpenAPI as operationId getJwks with an
-          operation-level server override pointing at the host root, outside the /v1 base path.
-      - path: /.well-known/security.txt
-        status: 404
-      - path: /.well-known/openid-configuration
-        status: 404
+          Provider-specific JWKS (RFC 7517) publishing the ES256 public key (kid atk-1) used to
+          verify the optional identity assertion JWT. Declared in the OpenAPI as operationId getJwks
+          with an operation-level server override pointing at the host root, outside the /v1 base
+          path. Re-fetched 2026-08-31; key unchanged since 2026-08-09.
+      - {path: /.well-known/security.txt, status: 404, note: 'served on the parent domain tvarka.pro instead'}
+      - {path: /.well-known/openid-configuration, status: 404}
+      - {path: /.well-known/oauth-authorization-server, status: 404}
+      - {path: /.well-known/oauth-protected-resource, status: 404}
+      - {path: /.well-known/api-catalog, status: 404, note: 'the provider does publish an APIs.json index at https://atk.tvarka.pro/apis.json, just not at the RFC 9727 linkset path'}
+      - {path: /.well-known/ai-plugin.json, status: 404}
+      - {path: /.well-known/ucp.json, status: 404}
+      - {path: /.well-known/acp.json, status: 404}
+      - {path: /.well-known/aauth-resource.json, status: 404}
+      - {path: /.well-known/agent-card.json, status: 404}
+      - {path: /.well-known/agent.json, status: 404}
+      - {path: /.well-known/tvarka-negative-control-7f3ab91c.json, status: 404, control: true}
+  - host: https://sign-api.tvarka.pro
+    role: Tvarka Sign API + MCP server (discovered 2026-08-31)
+    documents:
+      - {path: /.well-known/security.txt, status: 404}
+      - {path: /.well-known/openid-configuration, status: 404}
       - path: /.well-known/oauth-authorization-server
         status: 404
-      - path: /.well-known/api-catalog
-        status: 404
-      - path: /.well-known/ai-plugin.json
-        status: 404
-      - path: /.well-known/agent-card.json
-        status: 404
-      - path: /.well-known/agent.json
-        status: 404
-  - host: https://tvarka.pro
-    documents:
-      - path: /.well-known/security.txt
-        status: 404
-      - path: /.well-known/agent-card.json
-        status: 404
-      - path: /.well-known/agent.json
-        status: 404
-  - host: https://sign.tvarka.pro
-    documents:
-      - path: /.well-known/security.txt
-        status: 404
-      - path: /.well-known/agent-card.json
-        status: 404
-      - path: /.well-known/agent.json
-        status: 404
-other_discovery:
-  - path: /apis.json
-    host: https://atk.tvarka.pro
-    status: 200
-    note: Provider-published APIs.json 0.19 developer catalog (also served as /apis.yaml).
-  - path: /openapi.json
-    host: https://atk.tvarka.pro
-    status: 200
-    media_type: application/vnd.oai.openapi+json;version=3.1
-  - path: /status.json
-    host: https://atk.tvarka.pro
-    status: 200
-    note: Machine-readable status snapshot.
-  - path: /status/feed.xml
-    host: https://atk.tvarka.pro
-    status: 200
-    note: Atom incident feed.
-  - path: /health/
-    host: https://atk.tvarka.pro
-    status: 200
-    note: Plain-text reachability probe (returns "OK").
-  - path: /sdk/manifest.json
-    host: https://atk.tvarka.pro
-    status: 200
-    note: SDK download manifest with per-bundle version, size and SHA-256.
-  - path: /llms.txt
-    host: https://tvarka.pro
-    status: 200
-    file: ../llms/tvarka-pro-llms.txt
+        note: >-
+          Relevant negative: the host runs an MCP server at /mcp but does NOT use OAuth. Tool calls
+          carry a static tsk_ bearer key, so there is no authorization-server metadata to serve.
+      - {path: /.well-known/oauth-protected-resource, status: 404, note: 'no RFC 9728 protected-resource metadata for the MCP endpoint'}
+      - {path: /.well-known/api-catalog, status: 404}
+      - {path: /.well-known/ai-plugin.json, status: 404}
+      - {path: /.well-known/ucp.json, status: 404}
+      - {path: /.well-known/acp.json, status: 404}
+      - {path: /.well-known/aauth-resource.json, status: 404}
+      - {path: /.well-known/agent-card.json, status: 404}
+      - {path: /.well-known/agent.json, status: 404}
+      - {path: /.well-known/tvarka-negative-control-7f3ab91c.json, status: 404, control: true}
+non_well_known_machine_entrypoints:
+  note: >-
+    Recorded for completeness - these are real machine entrypoints the provider serves, but not at
+    RFC 8615 paths, so they are not documents[] rows above.
+  entries:
+    - {url: 'https://atk.tvarka.pro/apis.json', status: 200, kind: APIs.json 0.19 index}
+    - {url: 'https://atk.tvarka.pro/apis.yaml', status: 200, kind: APIs.json 0.19 index (YAML)}
+    - {url: 'https://atk.tvarka.pro/openapi.json', status: 200, kind: OpenAPI 3.1}
+    - {url: 'https://atk.tvarka.pro/status.json', status: 200, kind: status snapshot}
+    - {url: 'https://atk.tvarka.pro/health/', status: 200, kind: reachability probe}
+    - {url: 'https://atk.tvarka.pro/sdk/manifest.json', status: 200, kind: SDK download manifest}
+    - {url: 'https://sign-api.tvarka.pro/openapi.json', status: 200, kind: OpenAPI 3.1}
+    - {url: 'https://sign-api.tvarka.pro/llms.txt', status: 200, kind: llms.txt}
+    - {url: 'https://sign-api.tvarka.pro/mcp', status: 200, kind: 'MCP Streamable HTTP (tools/list answers anonymously)'}
+    - {url: 'https://tvarka.pro/llms.txt', status: 200, kind: llms.txt}
+    - {url: 'https://atk.tvarka.pro/llms.txt', status: 404, kind: llms.txt}

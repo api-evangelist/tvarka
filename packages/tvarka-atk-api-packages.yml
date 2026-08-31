@@ -1,4 +1,4 @@
-generated: '2026-08-09'
+generated: '2026-08-31'
 method: searched
 source: https://atk.tvarka.pro/docs/sdks/
 docs: https://atk.tvarka.pro/docs/sdks/
@@ -7,8 +7,9 @@ distribution: >-
   Tvarka does not publish to public package registries. Both SDKs ship as deterministic source
   bundles downloaded from the API host, with the exact filename, version, byte size and SHA-256
   digest published in a machine-readable manifest so CI can verify a download without scraping the
-  docs page. Probed 2026-08-09: npm registry search for "tvarka" returns no first-party package;
-  pypi.org/pypi/tvarka and pypi.org/pypi/tvarka-atk both 404.
+  docs page. Re-probed 2026-08-31: npm registry search for "tvarka" still returns no first-party package
+  (only unrelated Lithuanian packages); pypi.org/pypi/tvarka, pypi.org/pypi/tvarka-atk and
+  rubygems.org/api/v1/gems/tvarka all 404.
 packages:
   - language: python
     registry: direct-download
@@ -16,8 +17,17 @@ packages:
     version: 0.1.0
     url: https://atk.tvarka.pro/sdk/python.zip
     filename: tvarka-atk-python-0.1.0.zip
-    sha256: 28ae60db655c21584ad86be3ea3aa1d37fc61bf1a73e292a9f1794b11a61966d
-    size_bytes: 3920
+    sha256: 823a7b4b3cba265d6a6a4dd098a19f9cbb88543a1b123573a4b26d90dc9bcb7a
+    size_bytes: 3727
+    published: null
+    published_note: >-
+      The manifest publishes no release DATE for either bundle - only version, filename, byte size
+      and digest - so currency cannot be dated from the registry the way an npm or PyPI release can.
+      What IS datable: the manifest declares generatedForApiVersion 1.4.0, i.e. it tracks the current
+      contract. The digest and byte size of this bundle CHANGED between 2026-08-09
+      (28ae60db655c21584ad86be3ea3aa1d37fc61bf1a73e292a9f1794b11a61966d, 3920 bytes) and 2026-08-31,
+      while the declared version stayed 0.1.0 - the bundle was rebuilt for 1.4.0 without a version
+      bump, so a consumer pinning "0.1.0" cannot tell which build they hold. Pin the SHA-256.
     install: curl -O https://atk.tvarka.pro/sdk/python.zip
     official: true
     scope: server
@@ -33,6 +43,10 @@ packages:
     filename: tvarka-atk-web-0.1.0.zip
     sha256: 093c9843299d07eb27cca9bff4910b14446e94994ff33c5276790f19f2357726
     size_bytes: 2990
+    published: null
+    published_note: >-
+      No release date published; digest and byte size UNCHANGED since 2026-08-09, so this bundle was
+      not rebuilt for contract 1.4.0.
     install: curl -O https://atk.tvarka.pro/sdk/web.zip
     official: true
     scope: browser-device
@@ -40,11 +54,19 @@ packages:
       Zero-dependency ESM package with TypeScript declarations. Accepts only request-scoped client
       tokens and delegates card access to an integrator-owned CardDriver, so no provider secret ever
       reaches the browser or device.
+manifest_state:
+  url: https://atk.tvarka.pro/sdk/manifest.json
+  fetched: '2026-08-31'
+  http_status: 200
+  schema_version: '1'
+  generated_for_api_version: 1.4.0
 registries_probed:
-  - {registry: npm, query: tvarka, result: no first-party package}
-  - {registry: pypi, query: tvarka, result: 404}
-  - {registry: pypi, query: tvarka-atk, result: 404}
-  - {registry: github, query: tvarka atk, result: no provider-owned repository}
+  - {registry: npm, query: tvarka, probed: '2026-08-31', result: no first-party package}
+  - {registry: pypi, query: tvarka, probed: '2026-08-31', result: 404}
+  - {registry: pypi, query: tvarka-atk, probed: '2026-08-31', result: 404}
+  - {registry: rubygems, query: tvarka, probed: '2026-08-31', result: 404}
+  - {registry: crates.io, query: tvarka, probed: '2026-08-31', result: '403 - registry refused the unauthenticated probe, not evidence of absence'}
+  - {registry: github, query: tvarka, probed: '2026-08-31', result: no provider-owned repository among 59 name matches}
 collections:
   - type: postman
     name: Authentication collection
@@ -57,3 +79,12 @@ collections:
 notes: >-
   License is proprietary (https://tvarka.pro/salygos/); the docs state the SDK source packages are
   proprietary integration materials and that the published OpenAPI contract remains authoritative.
+
+sign_api:
+  note: >-
+    The Tvarka Sign API (sign-api.tvarka.pro, discovered 2026-08-31) ships NO SDK and no Postman
+    collection - /sdk/manifest.json and /postman/sign.json both 404 on that host. Its client story is
+    the OpenAPI contract plus the hosted MCP server; see mcp/tvarka-sign-api-mcp.yml.
+  probes:
+    - {url: 'https://sign-api.tvarka.pro/sdk/manifest.json', status: 404}
+    - {url: 'https://sign-api.tvarka.pro/postman/sign.json', status: 404}

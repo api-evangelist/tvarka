@@ -1,0 +1,95 @@
+generated: '2026-08-31'
+method: derived
+source: openapi/tvarka-sign-api-openapi.yml
+docs: https://sign-api.tvarka.pro/docs
+summary: >-
+  One aggregate root - the signing - owning an ordered-or-unordered roster of signers, plus two
+  satellites (a reusable stored file and a free-text comment) and one grouping construct (a batch of
+  signings raised together). Unlike the sibling ATK API, this model DOES have parent/child listing
+  relationships: a signing has many signers and many comments, and both are addressed under the
+  signing's path.
+identifiers:
+  - name: signingId
+    format: uuid
+    note: Server-issued, path parameter on every per-signing operation, echoed on every webhook.
+  - name: signerId
+    format: string
+    note: >-
+      Addresses one signer within a signing. The MCP surface does not use it - remind_signer takes a
+      signerEmail and resolves it server-side.
+  - name: batchId
+    format: uuid
+  - name: fileToken
+    format: string
+    note: >-
+      Returned by uploadFile. A signing that references a token holds its OWN COPY of the bytes, so
+      deleting the file does not affect signings already built from it.
+  - name: externalId
+    format: string
+    owner: caller
+    note: >-
+      The caller's own correlation key, echoed on the signing and on every webhook payload. With no
+      request idempotency header on this API, it is the only thing that lets a caller distinguish a
+      retry from a duplicate.
+entities:
+  - name: Signing
+    schema: '#/components/schemas/Signing'
+    root: true
+    lifecycle_states: '#/components/schemas/SigningStatus'
+    created_by: [createSigning, createBatch]
+    read_by: [getSigning, listSignings]
+    updated_by: [updateSigning, addSigner, updateSignerMethods, removeSigner, archiveSigning]
+    ended_by: [cancelSigning, eraseSigning, eraseSignings]
+  - name: Signer
+    schema: '#/components/schemas/Signer'
+    lifecycle_states: '#/components/schemas/SignerStatus'
+    created_by: [createSigning, addSigner]
+    updated_by: [updateSignerMethods, remindSigner]
+    removed_by: [removeSigner]
+  - name: Batch
+    schema: '#/components/schemas/Batch'
+    created_by: [createBatch]
+    read_by: [getBatch]
+  - name: StoredFile
+    schema: '#/components/schemas/StoredFile'
+    created_by: [uploadFile]
+    read_by: [getFile]
+    removed_by: [deleteFile]
+  - name: Comment
+    schema: '#/components/schemas/Comment'
+    created_by: [addComment]
+    read_by: [listComments]
+    note: Comments are the caller's own notes and are NOT shown to signers.
+  - name: SignedDocument
+    schema: '#/components/schemas/SignedDocument'
+    read_by: [downloadSignedDocument]
+  - name: SigningList
+    schema: '#/components/schemas/SigningList'
+    kind: envelope
+    note: 'Cursor pagination envelope: data[], hasMore, nextCursor.'
+  - name: Problem
+    schema: '#/components/schemas/Problem'
+    kind: error
+    note: RFC 9457; see errors/tvarka-sign-api-problem-types.yml.
+relationships:
+  - {from: Signing, to: Signer, kind: has_many, via: signers, note: 'maxItems 20 at creation'}
+  - {from: Signer, to: Signing, kind: belongs_to, via: signingId}
+  - {from: Signing, to: Comment, kind: has_many, via: 'path /v1/signings/{signingId}/comments'}
+  - {from: Batch, to: Signing, kind: has_many, via: 'one signing per document in the batch'}
+  - {from: Signing, to: StoredFile, kind: references, via: fileToken, note: 'by value - the signing copies the bytes'}
+  - {from: Signing, to: SignedDocument, kind: has_one, via: 'path /v1/signings/{signingId}/document', note: 'only once completed'}
+state_machine:
+  note: >-
+    The state machine, not the HTTP verb, decides what is allowed - which is why 409 is the dominant
+    error on this API. Nine of the twenty-one operations declare it.
+  ordering: >-
+    Signers are parallel by default; signingOrder makes them sequential, and waiting signers hold a
+    link that 404s until their turn. A sequential decline stops the workflow - the signing settles
+    declined and waiting signers are cancelled. A signer added mid-flight joins the end of the queue.
+  deadlines:
+    hard: expiresInDays
+    soft: softDeadlineInDays (triggers one automatic reminder round)
+id_prefixes:
+  note: No typed id prefixes on resources. The only prefixed values in the estate are the API KEYS - tsk_live_ and tsk_test_.
+related:
+  atk_api: data-model/tvarka-atk-api-data-model.yml

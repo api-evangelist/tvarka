@@ -1,0 +1,5 @@
+Contact: mailto:info@tvarka.pro
+Expires: 2027-08-30T00:00:00Z
+Preferred-Languages: lt, en
+Canonical: https://tvarka.pro/.well-known/security.txt
+Policy: https://tvarka.pro/saugumas/

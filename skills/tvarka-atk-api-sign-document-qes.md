@@ -4,7 +4,7 @@ description: >-
   Run the ATK signing ceremony - create a sign request for PAdES, ASiC-E, ADOC or raw CAdES, drive
   the card, then read both the status and the validation axis before downloading the container.
 api: openapi/tvarka-atk-api-openapi-original.json
-generated: '2026-08-09'
+generated: '2026-08-31'
 method: generated
 source: https://atk.tvarka.pro/docs/
 operations:
@@ -26,7 +26,7 @@ Same ceremony shape as authentication, with a document and a second result axis.
 
 | `format` | What you get | `method` |
 |---|---|---|
-| `pades` | Signed PDF | `physical`, `nfc`, `smart_id`, `mobile_id` |
+| `pades` | Signed PDF | `physical`, `nfc` |
 | `asice` | XAdES-T ASiC-E container | `physical`, `nfc` |
 | `adoc` | XAdES-T ADOC-V1.0 container | `physical`, `nfc` |
 | `raw` | Detached CAdES from a bare hash, no container | `physical`, `nfc` |

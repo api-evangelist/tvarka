@@ -1,4 +1,4 @@
-generated: '2026-08-09'
+generated: '2026-08-31'
 method: searched
 source: https://atk.tvarka.pro/docs/
 sources:
@@ -142,3 +142,89 @@ verification:
     verifies the card signature against the returned certificate; the optional assertion JWT can be
     verified against the published JWKS. The integrator does not have to trust the provider's word.
   jwks: well-known/tvarka-atk-api-atk-jwks.json
+
+dry_run_mode:
+  supported: false
+  mechanism: null
+  note: >-
+    No dry-run or preview flag exists on any operation. Rehearsal is environment-level: a provider
+    credential issued with environment=sandbox runs the identical API, zero-rated, against test-card
+    material. See sandbox/tvarka-atk-api-sandbox.yml.
+
+reversibility:
+  grade: verified
+  generated: '2026-08-31'
+  method: searched
+  sources:
+    - https://atk.tvarka.pro/docs/lifecycle/
+    - openapi/_original/tvarka-atk-api-openapi-original.json
+  summary: >-
+    Every ceremony is retractable while it is non-terminal, and every stored artifact is erasable on
+    demand or by a stated retention deadline. What is NOT reversible is the legal act itself: a
+    completed authentication is a verified national eID identity and a completed signature is a
+    qualified electronic signature under eIDAS. Deleting the request bytes does not unmake it.
+  surfaces:
+    - write: createAuthRequest
+      reversal: cancelAuthRequest
+      reversal_operation_id: cancelAuthRequest
+      window: >-
+        While the request is NON-TERMINAL. A terminal request (done, failed, cancelled, expired)
+        cannot be cancelled. Requests also expire on their own at expiresAt.
+      source: openapi/_original/tvarka-atk-api-openapi-original.json#cancelAuthRequest
+    - write: createSignRequest
+      reversal: cancelSignRequest
+      reversal_operation_id: cancelSignRequest
+      window: While the request is NON-TERMINAL.
+      source: openapi/_original/tvarka-atk-api-openapi-original.json#cancelSignRequest
+    - write: createAuthRequest
+      reversal: deleteAuthRequest
+      reversal_operation_id: deleteAuthRequest
+      window: >-
+        Any time, and at the latest by the retention deadline. A non-terminal request is cancelled
+        first, then document/result bytes and derived personal data are purged - exactly what the
+        retention job strips. A de-identified audit row remains. Idempotent. Basic auth only, scoped
+        to the caller's own provider.
+      docs: https://atk.tvarka.pro/docs/lifecycle/
+      source: openapi/_original/tvarka-atk-api-openapi-original.json#deleteAuthRequest
+    - write: createSignRequest
+      reversal: deleteSignRequest
+      reversal_operation_id: deleteSignRequest
+      window: >-
+        Any time, and at the latest by the retention deadline. Same purge semantics as
+        deleteAuthRequest, over the document/container bytes.
+      source: openapi/_original/tvarka-atk-api-openapi-original.json#deleteSignRequest
+    - write: any completed request
+      reversal: bulkErasure
+      reversal_operation_id: bulkErasure
+      window: >-
+        TERMINAL, not-yet-purged requests of the calling provider only, optionally restricted with
+        `before` (ISO-8601) to requests last updated before that moment. In-flight requests are left
+        untouched and must be erased individually.
+      source: openapi/_original/tvarka-atk-api-openapi-original.json#bulkErasure
+    - write: 'automatic retention purge (no call required)'
+      reversal: n/a
+      window: >-
+        30 days by default, reducible by contract. After the window the retention job removes
+        document/result bytes, certificates, derived identity data, filenames, messages and
+        per-request callback details; a pseudonymous certificate fingerprint and the minimal
+        usage/audit row remain for replay prevention, abuse investigation and billing integrity.
+      docs: https://atk.tvarka.pro/docs/lifecycle/
+    - write: validateDocument / timestampDocument / archiveDocument
+      reversal: none
+      irreversible: true
+      note: >-
+        Stateless paid trust services. There is nothing to undo - each emits exactly one usage event
+        and returns an output - but a replayed Idempotency-Key returns the original response without
+        a second billable event, and archiveDocument returns already-valid B-LT unchanged.
+    - write: 'the qualified signature / the verified identity'
+      reversal: none
+      irreversible: true
+      note: >-
+        The legally significant outcome. A qualified electronic signature has legal effect under
+        eIDAS from the moment the card makes it; no API operation revokes it.
+  billing_reversal:
+    note: >-
+      There is no refund or credit operation. The commercial model avoids needing one: nothing is
+      charged for failed, cancelled or expired ceremonies, and an idempotent service retry does not
+      create a second usage event.
+    source: https://atk.tvarka.pro/docs/pricing/

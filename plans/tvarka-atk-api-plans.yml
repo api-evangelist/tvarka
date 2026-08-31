@@ -1,4 +1,4 @@
-generated: '2026-08-09'
+generated: '2026-08-31'
 method: searched
 source: https://atk.tvarka.pro/docs/pricing/
 url: https://atk.tvarka.pro/docs/pricing/
@@ -23,15 +23,19 @@ plans:
     price: 0.07
     unit: per successful operation
     description: Validation, timestamp or archive service call.
+plan_count: 3
+withdrawn:
   - name: Production - Smart-ID
     price: 0.08
-    unit: per successful operation
-    description: Smart-ID authentication or PAdES signing.
+    withdrawn_in: contract 1.4.0
+    note: >-
+      Published on the pricing page while contract 1.3.0 was live; removed from
+      https://atk.tvarka.pro/docs/pricing/ when 1.4.0 withdrew the Smart-ID method. Recorded here so
+      the 2026-08-09 reading of this file is not silently contradicted.
   - name: Production - Mobile-ID
     price: 0.08
-    unit: per successful operation
-    description: Mobile-ID authentication or PAdES signing.
-plan_count: 5
+    withdrawn_in: contract 1.4.0
+    note: Same withdrawal as Smart-ID; remote-method ceremonies moved to the Tvarka Sign API.
 metering:
   - operation: Authentication
     billable_point: A verified identity reaches status "done".
@@ -50,3 +54,13 @@ rules:
 enterprise: >-
   An enterprise order may agree another whole-cent rate for later operations. Production onboarding
   confirms the enabled methods and their rates before credentials are activated.
+
+siblings:
+  - api: Tvarka Sign API
+    pricing: >-
+      Signatures are billed to the tenant's Sign workspace on Tvarka's ordinary per-signature price
+      ladder (https://tvarka.pro/kainodara/ - qualified signing from EUR 0.29 + VAT). There is no
+      separate API tariff and no subscription, and the Sign API publishes no rate table of its own,
+      so no numeric per-operation price is recorded for it here.
+    source: openapi/tvarka-sign-api-openapi.yml (info.description, "Tenancy and billing")
+    sandbox: A tsk_test_ key is exempt from the funding precondition and costs nothing.

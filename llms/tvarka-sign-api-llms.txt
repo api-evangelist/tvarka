@@ -1,0 +1,69 @@
+# Tvarka Sign API
+
+Qualified electronic signing of Lithuanian documents over HTTP and MCP.
+Post a document and a list of signers; each signer signs with their own
+eID, confirming with a single PIN entry. LT ATK NFC uses the Tvarka Sign
+mobile app; Smart-ID and Mobile-ID use the hosted ceremony or mobile app. No
+production API call produces a signature - a signature is a human act.
+
+Formats: this API accepts PDF, appendable ASiC-E containers, and the ADOC
+family (.adoc, .bedoc, .cedoc, .gedoc, .ggedoc) for countersigning one that is
+already signed. Containers are signed in place. MDOC is not accepted for
+countersigning. The complete Tvarka API estate produces every Regulation
+(EU) 2026/248 Annex I family: PAdES, XAdES, CAdES, JAdES and ASiC. The
+separate ATK API provides the full LT ATK NFC/reader/USB and raw-CAdES
+surface.
+
+Containers: post `document` for one finished file, or `container` to have
+several files composed into a new package and signed once (asice takes PDFs;
+adoc takes .pdf and .xlsx; up to 20 files). A PDF may set flatten: true to
+freeze form fields into page content, which fails closed rather than dropping
+a field it cannot draw.
+
+Workflow: signers are parallel by default; signingOrder sequential releases
+them one at a time and the waiting signers hold a link that 404s until their
+turn. A sequential decline stops the workflow: the signing settles declined
+and waiting signers are cancelled; a signer added mid-flight joins the end
+of the queue. role: viewer records a party who is never invited and never
+blocks.
+expiresInDays is the hard deadline; softDeadlineInDays is the wanted-by date
+that triggers one automatic reminder round.
+
+Files and batches: POST /v1/files stores a document once and returns a
+fileToken later signings can reference; POST /v1/batches raises one signing
+per document for one set of parties. A batch is a grouping, not one PIN for
+many documents - every document keeps its own ceremony and signature.
+Comments on a signing are your own notes and are not shown to signers.
+
+Long-term signatures: POST /v1/signings/<built-in function id>/archive raises PDF to
+PAdES-B-LT and ASiC-E to XAdES-LT. ASiC-E signing already reaches LT; ADOC
+stays at XAdES-T because ADOC-V1.0 specifies that level.
+
+Errors: RFC 9457, and body validation collects every fault into one
+validation-failed response with an errors array of JSON Pointer + detail.
+
+Sandbox: a tsk_test_ key simulates the whole lifecycle and returns a real
+downloadable artifact, so integration code can be tested end to end without a
+real eID. The sandbox never adds a signature: an unsigned PDF comes back
+stamped and carries no signature, and anything posted already signed comes
+back byte-identical. Artifacts are flagged sandbox in the response and
+webhook. Tvarka issues no test signatures.
+
+Validation: simple and advisory, not qualified validation.
+Electronic seals: not offered.
+
+Base URL: https://sign-api.tvarka.pro
+Contract: https://sign-api.tvarka.pro/openapi.yaml
+Docs: https://sign-api.tvarka.pro/docs
+MCP: https://sign-api.tvarka.pro/mcp (pro.tvarka/sign)
+Auth: Authorization: Bearer <key>, provisioned during onboarding.
+Access requests: info@tvarka.pro (a sandbox tenant costs nothing).
+Pricing: per signature, billed to the workspace. No subscription.
+
+## MCP tools
+- list_documents: Documents in the tenant workspace vault that can be sent for signing. Returns documentId values for request_signatures.
+- request_signatures: Open a qualified signing ceremony on a vault document for one or more signers. Returns a ceremony URL per signer, or emails them directly when delivery is "email". Billed per signature on completion.
+- get_signing: The current state of one signing and each of its signers.
+- list_signings: Signings raised by this tenant, newest first.
+- remind_signer: Re-send one signer their invitation email. Limited to one reminder per signer per hour.
+- cancel_signing: Retract every outstanding invitation and close the signing. Signatures already collected are untouched and remain valid.

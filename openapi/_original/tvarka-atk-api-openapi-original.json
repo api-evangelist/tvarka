@@ -2,9 +2,9 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Tvarka ATK API",
-    "version": "1.3.0",
+    "version": "1.4.0",
     "summary": "Lithuanian eID authentication, qualified signing, validation and LTV services.",
-    "description": "The canonical ATK API contract. ATK physical-reader and NFC ceremonies are the primary authentication and signing methods. Smart-ID and Mobile-ID are optional server-side methods under the same request, polling, webhook and metering model. Start with the [five-minute quickstart](https://atk.tvarka.pro/docs/quickstart/) or use the specialist [authentication](https://atk.tvarka.pro/docs/auth/) and [signing](https://atk.tvarka.pro/docs/sign/) references.",
+    "description": "The canonical ATK API contract. Authentication and signing are card-only: LT ATK physical-reader and NFC ceremonies, under one request, polling, webhook and metering model. Remote methods are not offered here - hosted remote-method ceremonies live in the [Tvarka Sign developer API](https://sign-api.tvarka.pro/docs). Start with the [five-minute quickstart](https://atk.tvarka.pro/docs/quickstart/) or use the specialist [authentication](https://atk.tvarka.pro/docs/auth/) and [signing](https://atk.tvarka.pro/docs/sign/) references.",
     "termsOfService": "https://atk.tvarka.pro/docs/lifecycle/",
     "contact": {
       "name": "Tvarka API team",
@@ -61,17 +61,17 @@
         ],
         "operationId": "createAuthRequest",
         "summary": "Create an authentication request (server-to-server)",
-        "description": "Called by the provider's backend with HTTP Basic (`keyId:keySecret`). `audience` must be an\nexact origin on the provider's allow-list. Physical requests return a short-lived `clientToken`;\nNFC requests return a pairing hint; Smart-ID/Mobile-ID requests remain entirely server-side.\n",
+        "description": "Called by the provider's backend with HTTP Basic (`keyId:keySecret`). `audience` must be an\nexact origin on the provider's allow-list. Physical requests return a short-lived `clientToken`;\nNFC requests return a pairing hint.\n",
         "x-codeSamples": [
           {
             "lang": "curl",
-            "label": "Smart-ID",
-            "source": "curl -u \"$ATK_KEY_ID:$ATK_KEY_SECRET\" https://atk.tvarka.pro/v1/auth/requests \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"audience\":\"https://app.example\",\"method\":\"smart_id\",\"personalCode\":\"39001010000\"}'\n"
+            "label": "Physical reader",
+            "source": "curl -u \"$ATK_KEY_ID:$ATK_KEY_SECRET\" https://atk.tvarka.pro/v1/auth/requests \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"audience\":\"https://app.example\",\"method\":\"physical\"}'\n"
           },
           {
             "lang": "curl",
-            "label": "Mobile-ID",
-            "source": "curl -u \"$ATK_KEY_ID:$ATK_KEY_SECRET\" https://atk.tvarka.pro/v1/auth/requests \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"audience\":\"https://app.example\",\"method\":\"mobile_id\",\"personalCode\":\"39001010000\",\"phoneNumber\":\"+37061234567\"}'\n"
+            "label": "NFC phone tap",
+            "source": "curl -u \"$ATK_KEY_ID:$ATK_KEY_SECRET\" https://atk.tvarka.pro/v1/auth/requests \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"audience\":\"https://app.example\",\"method\":\"nfc\"}'\n"
           }
         ],
         "security": [
@@ -94,21 +94,11 @@
                     "method": "physical"
                   }
                 },
-                "smartId": {
-                  "summary": "Optional Smart-ID method",
+                "nfc": {
+                  "summary": "ATK by NFC phone tap",
                   "value": {
                     "audience": "https://app.example",
-                    "method": "smart_id",
-                    "personalCode": "39001010000"
-                  }
-                },
-                "mobileId": {
-                  "summary": "Optional Mobile-ID method",
-                  "value": {
-                    "audience": "https://app.example",
-                    "method": "mobile_id",
-                    "personalCode": "39001010000",
-                    "phoneNumber": "+37061234567"
+                    "method": "nfc"
                   }
                 }
               }
@@ -117,7 +107,7 @@
         },
         "responses": {
           "202": {
-            "description": "Request created; awaiting the ATK client or remote user authorization.",
+            "description": "Request created; awaiting the ATK client authorization.",
             "content": {
               "application/json": {
                 "schema": {
@@ -151,7 +141,7 @@
         ],
         "operationId": "submitAuthCertificate",
         "summary": "Submit the card's authentication certificate; receive the DTBS + challenge",
-        "description": "Called by the client with `Authorization: Bearer <clientToken>`. The API validates the\ncertificate (chain, revocation, purpose = authentication, key usage), builds the canonical\nchallenge, and returns the exact `dtbs` the card must sign plus a single-use `operationToken`.\nPhysical/NFC only; server-side methods do not call this endpoint.\n",
+        "description": "Called by the client with `Authorization: Bearer <clientToken>`. The API validates the\ncertificate (chain, revocation, purpose = authentication, key usage), builds the canonical\nchallenge, and returns the exact `dtbs` the card must sign plus a single-use `operationToken`.\n",
         "security": [
           {
             "clientToken": []
@@ -208,7 +198,7 @@
         ],
         "operationId": "completeAuth",
         "summary": "Submit the raw card signature; receive the verified identity",
-        "description": "Called by the client with `Authorization: Bearer <clientToken>` and the single-use\n`operationToken` in the body. The API verifies the signature against the stored `dtbs` and the\ncertificate's public key, enforces the identity-swap guard, and returns the verified identity\n(and the optional `assertion` JWT). Retry-safe: a repeat with the same tuple returns the same\nresult; a different signature/cert after the token is claimed is rejected.\nPhysical/NFC only; server-side methods complete asynchronously.\n",
+        "description": "Called by the client with `Authorization: Bearer <clientToken>` and the single-use\n`operationToken` in the body. The API verifies the signature against the stored `dtbs` and the\ncertificate's public key, enforces the identity-swap guard, and returns the verified identity\n(and the optional `assertion` JWT). Retry-safe: a repeat with the same tuple returns the same\nresult; a different signature/cert after the token is claimed is rejected.\n",
         "security": [
           {
             "clientToken": []
@@ -265,7 +255,7 @@
         ],
         "operationId": "getAuthRequest",
         "summary": "Poll request status / fetch the result",
-        "description": "Readable with the provider's Basic credentials for every method, or with the request's\n`clientToken` for physical/NFC requests. Smart-ID/Mobile-ID providers poll this endpoint or\nconsume the terminal webhook.\n",
+        "description": "Readable with the provider's Basic credentials, or with the request's `clientToken`.\n",
         "security": [
           {
             "basicAuth": []
@@ -562,17 +552,17 @@
         ],
         "operationId": "createSignRequest",
         "summary": "Create a signing request (server-to-server)",
-        "description": "HTTP Basic. Provide the document one of three ways - inline `document` (base64), an allow-listed\n`documentRef`, or a bare `hash` (only for `format:\"raw\"`). Container formats\n(pades/asice/adoc) require exactly one of `document` or `documentRef`. PAdES accepts an unsigned\nor already-signed PDF; ASiC-E/ADOC accept either a PDF (Tvarka constructs a new single-payload\ncontainer) or an existing valid container, which is treated as an opaque whole and receives one\nadditional signature without payload or attachment edits. Physical requests return a client\ntoken, NFC returns a pairing hint, and Smart-ID/Mobile-ID return a user verification code.\nRemote methods are PAdES-only and stay server-side.\n",
+        "description": "HTTP Basic. Provide the document one of three ways - inline `document` (base64), an allow-listed\n`documentRef`, or a bare `hash` (only for `format:\"raw\"`). Container formats\n(pades/asice/adoc) require exactly one of `document` or `documentRef`. PAdES accepts an unsigned\nor already-signed PDF; ASiC-E/ADOC accept either a PDF (Tvarka constructs a new single-payload\ncontainer) or an existing valid container, which is treated as an opaque whole and receives one\nadditional signature without payload or attachment edits. Physical requests return a client\ntoken; NFC returns a pairing hint.\n",
         "x-codeSamples": [
           {
             "lang": "curl",
-            "label": "Smart-ID PAdES",
-            "source": "curl -u \"$ATK_KEY_ID:$ATK_KEY_SECRET\" https://atk.tvarka.pro/v1/sign/requests \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"format\":\"pades\",\"method\":\"smart_id\",\"personalCode\":\"39001010000\",\"document\":\"<base64-pdf>\"}'\n"
+            "label": "Physical reader PAdES",
+            "source": "curl -u \"$ATK_KEY_ID:$ATK_KEY_SECRET\" https://atk.tvarka.pro/v1/sign/requests \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"format\":\"pades\",\"method\":\"physical\",\"document\":\"<base64-pdf>\"}'\n"
           },
           {
             "lang": "curl",
-            "label": "Mobile-ID PAdES",
-            "source": "curl -u \"$ATK_KEY_ID:$ATK_KEY_SECRET\" https://atk.tvarka.pro/v1/sign/requests \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"format\":\"pades\",\"method\":\"mobile_id\",\"personalCode\":\"39001010000\",\"phoneNumber\":\"+37061234567\",\"document\":\"<base64-pdf>\"}'\n"
+            "label": "NFC phone tap PAdES",
+            "source": "curl -u \"$ATK_KEY_ID:$ATK_KEY_SECRET\" https://atk.tvarka.pro/v1/sign/requests \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"format\":\"pades\",\"method\":\"nfc\",\"document\":\"<base64-pdf>\"}'\n"
           }
         ],
         "security": [
@@ -596,22 +586,11 @@
                     "document": "JVBERi0xLjQK"
                   }
                 },
-                "smartId": {
-                  "summary": "Optional Smart-ID PAdES method",
+                "nfc": {
+                  "summary": "ATK by NFC phone tap",
                   "value": {
                     "format": "pades",
-                    "method": "smart_id",
-                    "personalCode": "39001010000",
-                    "document": "JVBERi0xLjQK"
-                  }
-                },
-                "mobileId": {
-                  "summary": "Optional Mobile-ID PAdES method",
-                  "value": {
-                    "format": "pades",
-                    "method": "mobile_id",
-                    "personalCode": "39001010000",
-                    "phoneNumber": "+37061234567",
+                    "method": "nfc",
                     "document": "JVBERi0xLjQK"
                   }
                 }
@@ -621,7 +600,7 @@
         },
         "responses": {
           "202": {
-            "description": "Request created; awaiting the ATK client or remote user authorization.",
+            "description": "Request created; awaiting the ATK client authorization.",
             "content": {
               "application/json": {
                 "schema": {
@@ -715,7 +694,7 @@
         ],
         "operationId": "completeSign",
         "summary": "Submit the raw card signature; assemble the container",
-        "description": "Bearer clientToken + single-use `operationToken`. Synchronous: the API verifies the signature\nagainst the stored DTBS + cert, assembles + timestamps the AdES container inline, schedules\nasync validation, and returns `200 done` with `validation:{status:\"pending\"}` (or\n`notApplicable` in sandbox/raw, or the internal ADOC verdict). `finalizing` is observable via\nGET only if a crash wedges the request until the reaper releases it. Retry-safe; a transient\nassembly failure returns a retryable 5xx with the operation released; one `atk.sign` charge\nat `done`. Physical/NFC only; remote methods complete asynchronously.\n",
+        "description": "Bearer clientToken + single-use `operationToken`. Synchronous: the API verifies the signature\nagainst the stored DTBS + cert, assembles + timestamps the AdES container inline, schedules\nasync validation, and returns `200 done` with `validation:{status:\"pending\"}` (or\n`notApplicable` in sandbox/raw, or the internal ADOC verdict). `finalizing` is observable via\nGET only if a crash wedges the request until the reaper releases it. Retry-safe; a transient\nassembly failure returns a retryable 5xx with the operation released; one `atk.sign` charge\nat `done`.\n",
         "security": [
           {
             "clientToken": []
@@ -1253,12 +1232,10 @@
         "type": "string",
         "enum": [
           "physical",
-          "nfc",
-          "smart_id",
-          "mobile_id"
+          "nfc"
         ],
         "example": "physical",
-        "description": "physical = desktop reader; nfc = phone tap; smart_id/mobile_id = server-side remote eID."
+        "description": "physical = desktop reader; nfc = phone tap."
       },
       "AuthStatus": {
         "type": "string",
@@ -1333,95 +1310,6 @@
           "method"
         ],
         "additionalProperties": false,
-        "oneOf": [
-          {
-            "title": "Physical ATK",
-            "properties": {
-              "method": {
-                "const": "physical"
-              }
-            },
-            "not": {
-              "anyOf": [
-                {
-                  "required": [
-                    "personalCode"
-                  ],
-                  "properties": {
-                    "personalCode": {}
-                  }
-                },
-                {
-                  "required": [
-                    "phoneNumber"
-                  ],
-                  "properties": {
-                    "phoneNumber": {}
-                  }
-                }
-              ]
-            }
-          },
-          {
-            "title": "ATK over NFC",
-            "properties": {
-              "method": {
-                "const": "nfc"
-              }
-            },
-            "not": {
-              "anyOf": [
-                {
-                  "required": [
-                    "personalCode"
-                  ],
-                  "properties": {
-                    "personalCode": {}
-                  }
-                },
-                {
-                  "required": [
-                    "phoneNumber"
-                  ],
-                  "properties": {
-                    "phoneNumber": {}
-                  }
-                }
-              ]
-            }
-          },
-          {
-            "title": "Smart-ID",
-            "required": [
-              "personalCode"
-            ],
-            "properties": {
-              "method": {
-                "const": "smart_id"
-              }
-            },
-            "not": {
-              "required": [
-                "phoneNumber"
-              ],
-              "properties": {
-                "phoneNumber": {}
-              }
-            }
-          },
-          {
-            "title": "Mobile-ID",
-            "required": [
-              "personalCode",
-              "phoneNumber"
-            ],
-            "properties": {
-              "method": {
-                "const": "mobile_id"
-              }
-            }
-          }
-        ],
         "properties": {
           "audience": {
             "type": "string",
@@ -1430,18 +1318,6 @@
           },
           "method": {
             "$ref": "#/components/schemas/AuthMethod"
-          },
-          "personalCode": {
-            "type": "string",
-            "pattern": "^[0-9]{11}$",
-            "example": "39001010000",
-            "description": "Required for Smart-ID and Mobile-ID; rejected for physical/NFC."
-          },
-          "phoneNumber": {
-            "type": "string",
-            "pattern": "^\\+3706[0-9]{7}$",
-            "example": "+37061234567",
-            "description": "Required for Mobile-ID, rejected for every other method."
           },
           "message": {
             "type": "string",
@@ -1467,7 +1343,7 @@
           "status",
           "expiresAt"
         ],
-        "description": "Physical requests return `clientToken`; NFC requests return `pairing`; remote methods return neither.",
+        "description": "Physical requests return `clientToken`; NFC requests return `pairing`.",
         "properties": {
           "requestId": {
             "type": "string",
@@ -1478,11 +1354,11 @@
           },
           "verificationCode": {
             "type": "string",
-            "description": "NFC anti-relay code, or the user verification code for Smart-ID/Mobile-ID."
+            "description": "NFC anti-relay confirmation code."
           },
           "clientToken": {
             "type": "string",
-            "description": "Scoped bearer JWT for physical-card `/certificate` + `/complete`; absent for remote methods."
+            "description": "Scoped bearer JWT for physical-card `/certificate` + `/complete`."
           },
           "status": {
             "$ref": "#/components/schemas/AuthStatus"
@@ -1671,10 +1547,6 @@
           },
           "status": {
             "$ref": "#/components/schemas/AuthStatus"
-          },
-          "verificationCode": {
-            "type": "string",
-            "description": "Present while a Smart-ID/Mobile-ID request is non-terminal."
           },
           "nonce": {
             "type": "string",
@@ -1951,7 +1823,7 @@
         }
       },
       "SignSignRequestCreate": {
-        "description": "ATK supports every listed format; Smart-ID/Mobile-ID support PAdES only.",
+        "description": "The ATK card signs every listed format, by physical reader or NFC.",
         "oneOf": [
           {
             "title": "ATK raw detached CAdES",
@@ -2066,144 +1938,6 @@
                 }
               }
             ]
-          },
-          {
-            "title": "Smart-ID PAdES",
-            "type": "object",
-            "required": [
-              "format",
-              "method",
-              "personalCode"
-            ],
-            "additionalProperties": false,
-            "properties": {
-              "format": {
-                "type": "string",
-                "const": "pades"
-              },
-              "method": {
-                "type": "string",
-                "const": "smart_id"
-              },
-              "personalCode": {
-                "type": "string",
-                "pattern": "^[0-9]{11}$",
-                "example": "39001010000"
-              },
-              "document": {
-                "type": "string",
-                "format": "byte"
-              },
-              "documentRef": {
-                "$ref": "#/components/schemas/SignDocumentRef"
-              },
-              "filename": {
-                "type": "string"
-              },
-              "mimeType": {
-                "type": "string"
-              },
-              "message": {
-                "type": "string"
-              },
-              "externalId": {
-                "type": "string"
-              },
-              "webhookUrl": {
-                "type": "string",
-                "format": "uri"
-              }
-            },
-            "oneOf": [
-              {
-                "required": [
-                  "document"
-                ],
-                "properties": {
-                  "document": {}
-                }
-              },
-              {
-                "required": [
-                  "documentRef"
-                ],
-                "properties": {
-                  "documentRef": {}
-                }
-              }
-            ]
-          },
-          {
-            "title": "Mobile-ID PAdES",
-            "type": "object",
-            "required": [
-              "format",
-              "method",
-              "personalCode",
-              "phoneNumber"
-            ],
-            "additionalProperties": false,
-            "properties": {
-              "format": {
-                "type": "string",
-                "const": "pades"
-              },
-              "method": {
-                "type": "string",
-                "const": "mobile_id"
-              },
-              "personalCode": {
-                "type": "string",
-                "pattern": "^[0-9]{11}$",
-                "example": "39001010000"
-              },
-              "phoneNumber": {
-                "type": "string",
-                "pattern": "^\\+3706[0-9]{7}$",
-                "example": "+37061234567"
-              },
-              "document": {
-                "type": "string",
-                "format": "byte"
-              },
-              "documentRef": {
-                "$ref": "#/components/schemas/SignDocumentRef"
-              },
-              "filename": {
-                "type": "string"
-              },
-              "mimeType": {
-                "type": "string"
-              },
-              "message": {
-                "type": "string"
-              },
-              "externalId": {
-                "type": "string"
-              },
-              "webhookUrl": {
-                "type": "string",
-                "format": "uri"
-              }
-            },
-            "oneOf": [
-              {
-                "required": [
-                  "document"
-                ],
-                "properties": {
-                  "document": {}
-                }
-              },
-              {
-                "required": [
-                  "documentRef"
-                ],
-                "properties": {
-                  "documentRef": {}
-                }
-              }
-            ]
           }
         ]
       },
@@ -2216,7 +1950,7 @@
           "status",
           "expiresAt"
         ],
-        "description": "Physical requests return `clientToken`; NFC returns `pairing`; remote methods return neither.",
+        "description": "Physical requests return `clientToken`; NFC returns `pairing`.",
         "properties": {
           "requestId": {
             "type": "string",
@@ -2227,7 +1961,7 @@
           },
           "verificationCode": {
             "type": "string",
-            "description": "NFC anti-relay code, or the user verification code for Smart-ID/Mobile-ID."
+            "description": "NFC anti-relay confirmation code."
           },
           "clientToken": {
             "type": "string"
@@ -2729,10 +2463,6 @@
           "status": {
             "$ref": "#/components/schemas/SignStatus"
           },
-          "verificationCode": {
-            "type": "string",
-            "description": "Present while a Smart-ID/Mobile-ID request is non-terminal."
-          },
           "validation": {
             "$ref": "#/components/schemas/SignValidation"
           },
@@ -2763,12 +2493,10 @@
         "type": "string",
         "enum": [
           "physical",
-          "nfc",
-          "smart_id",
-          "mobile_id"
+          "nfc"
         ],
         "example": "physical",
-        "description": "physical/NFC use card endpoints; smart_id/mobile_id complete server-side and support PAdES only."
+        "description": "physical = desktop reader; nfc = phone tap."
       },
       "SignStatus": {
         "type": "string",
@@ -3039,7 +2767,7 @@
         }
       },
       "AuthServiceUnavailable": {
-        "description": "A required remote or erasure service is temporarily unavailable.",
+        "description": "A required backing or erasure service is temporarily unavailable.",
         "content": {
           "application/json": {
             "schema": {

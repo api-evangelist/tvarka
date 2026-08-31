@@ -1,0 +1,45 @@
+generated: '2026-08-31'
+method: derived
+source: openapi/tvarka-sign-api-openapi.yml#/webhooks
+docs: https://sign-api.tvarka.pro/docs
+spec_type: Webhooks
+asyncapi_published: false
+asyncapi_probe:
+  - {url: 'https://sign-api.tvarka.pro/asyncapi.yaml', status: 404}
+  - {url: 'https://sign-api.tvarka.pro/asyncapi.json', status: 404}
+note: >-
+  Tvarka publishes no AsyncAPI document for either API. The Sign API declares its event surface
+  natively in the OpenAPI 3.1 webhooks block as a single signingEvent callback carrying seven event
+  types. Captured here as a webhook catalog rather than fabricated as an AsyncAPI.
+delivery:
+  mode: at-least-once
+  retry: Retried with backoff on 5xx and transport failures.
+  alternative: polling getSigning / listSignings
+  subscription: Per-signing - webhookUrl is set on the signing when it is created.
+  guarantee_note: >-
+    The provider states delivery is a convenience and never the only way to learn an outcome -
+    polling always works, and a failed delivery never changes a signing's state.
+security:
+  signature_header: X-Tvarka-Signature
+  signature_format: 'sha256=<HMAC-SHA256 of the raw body>'
+  key: your webhook secret
+  idempotency_header: X-Tvarka-Idempotency-Key
+  event_header: X-Tvarka-Event
+  guidance: Verify the MAC before acting, then deduplicate by the idempotency key.
+privacy:
+  note: >-
+    The payload never carries a signer's identity data - no personal code, no certificate subject,
+    no phone number. It echoes the email the caller supplied and nothing more. Stated verbatim in
+    the contract.
+events:
+  - {event: signing.signer_signed, terminal: false, meaning: One signer completed their ceremony.}
+  - {event: signing.signer_declined, terminal: false, meaning: 'One signer refused. Under sequential order this stops the workflow.'}
+  - {event: signing.completed, terminal: true}
+  - {event: signing.declined, terminal: true}
+  - {event: signing.cancelled, terminal: true}
+  - {event: signing.expired, terminal: true}
+  - {event: signing.failed, terminal: true}
+payload_fields: [event, signingId, status, externalId, occurredAt, completionMode]
+ack: any 2XX response
+related:
+  atk_api: asyncapi/tvarka-atk-api-webhooks.yml

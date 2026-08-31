@@ -2,8 +2,8 @@ openapi: 3.1.0
 
 info:
   title: Tvarka ATK - QES Signing API (paid-tier addendum)
-  version: 1.3.0
-  summary: LT ATK qualified signing, with optional Smart-ID and Mobile-ID PAdES methods.
+  version: 1.4.0
+  summary: Card-native LT ATK qualified signing, by physical reader or NFC.
   description: |
     The QES half of the ATK API - `/v1/sign/*`. This is the **paid-tier addendum** to
     `tvarka_atk_auth_api.openapi.yaml`: same providers, same credential model, same card stack and
@@ -22,12 +22,9 @@ info:
          assembles + timestamps the AdES container, and returns `status:"done"` with
          `validation:{status:"pending"}`.
 
-    ## Smart-ID and Mobile-ID flow
-      For `method:"smart_id"` or `method:"mobile_id"`, create a PAdES request with `personalCode`
-      and, for Mobile-ID, `phoneNumber`. The response has a user verification code and no
-      `clientToken`; poll GET with Basic credentials or consume the terminal webhook. The
-      `/certificate` and `/complete` calls are not used. Remote methods are PAdES-only in v1.3;
-      physical/NFC remain available for raw, ASiC-E, and ADOC.
+    This API is deliberately **card-only** (v1.4): the LT ATK card by physical reader or NFC phone
+    tap. Remote methods such as Smart-ID and Mobile-ID are not offered here - for hosted remote-method
+    signing ceremonies, use the Tvarka Sign developer API (<https://sign-api.tvarka.pro/docs>).
 
     ## Two axes: `done` vs `validation`
       * `status:"done"` = the container is assembled AND the signer signature is verified. This is the
@@ -55,7 +52,7 @@ info:
   contact: { name: Tvarka, url: https://atk.tvarka.pro/docs/, email: info@tvarka.pro }
   license: { name: Proprietary, url: https://tvarka.pro }
   x-status: >-
-    IMPLEMENTED through 2026-08-02 (tvarka/atk/ Django app): /sign/* physical and NFC ceremony for
+    IMPLEMENTED through 2026-08-29 (tvarka/atk/ Django app): /sign/* physical and NFC ceremony for
     pades/raw/asice/adoc with inline or allow-listed documentRef input; TSA + B-LT/XAdES-T; async
     advisory SiVa; atk.sign metering at done; HMAC-signed `signStatus` webhooks (terminal + validation);
     per-provider rate limiting; finalizing-reaper crash recovery; retention purge + deletion (POST
@@ -63,9 +60,11 @@ info:
     Tvarka-issued test cards and produce deliberately non-qualified B-level artifacts (ATK_SANDBOX_TSA_URL
     instead of the production TSA, no B-LT upgrade, no SiVa — validation is `notApplicable`). Bare XAdES
     is intentionally outside v1; XAdES-T is delivered inside ASiC-E and ADOC. v1.1 accepts already-signed
-    PAdES/ASiC-E/ADOC inputs for an additional signature, plus configuration-gated server-side Smart-ID/Mobile-ID PAdES,
-    and exposes Basic-authenticated standalone
+    PAdES/ASiC-E/ADOC inputs for an additional signature, and exposes Basic-authenticated standalone
     validation, XAdES timestamping, and PAdES B-LT archive upgrade services with replay-safe metering.
+    v1.4 (2026-08-29) REMOVED the v1.3 opt-in Smart-ID/Mobile-ID PAdES passthrough before any provider
+    was entitled to it - this API is LT ATK card-only by design; remote-method ceremonies live in the
+    Tvarka Sign developer API.
     Android is the current production NFC client boundary; iOS client source is pre-release pending the
     Apple Developer account plus CoreNFC real-card release gates.
 
@@ -116,21 +115,20 @@ paths:
         or already-signed PDF; ASiC-E/ADOC accept either a PDF (Tvarka constructs a new single-payload
         container) or an existing valid container, which is treated as an opaque whole and receives one
         additional signature without payload or attachment edits. Physical requests return a client
-        token, NFC returns a pairing hint, and Smart-ID/Mobile-ID return a user verification code.
-        Remote methods are PAdES-only and stay server-side.
+        token; NFC returns a pairing hint.
       x-codeSamples:
         - lang: curl
-          label: Smart-ID PAdES
+          label: Physical reader PAdES
           source: |
             curl -u "$ATK_KEY_ID:$ATK_KEY_SECRET" https://atk.tvarka.pro/v1/sign/requests \
               -H 'Content-Type: application/json' \
-              -d '{"format":"pades","method":"smart_id","personalCode":"39001010000","document":"<base64-pdf>"}'
+              -d '{"format":"pades","method":"physical","document":"<base64-pdf>"}'
         - lang: curl
-          label: Mobile-ID PAdES
+          label: NFC phone tap PAdES
           source: |
             curl -u "$ATK_KEY_ID:$ATK_KEY_SECRET" https://atk.tvarka.pro/v1/sign/requests \
               -H 'Content-Type: application/json' \
-              -d '{"format":"pades","method":"mobile_id","personalCode":"39001010000","phoneNumber":"+37061234567","document":"<base64-pdf>"}'
+              -d '{"format":"pades","method":"nfc","document":"<base64-pdf>"}'
       security: [ { basicAuth: [] } ]
       requestBody:
         required: true
@@ -141,15 +139,12 @@ paths:
               physicalAtk:
                 summary: Primary ATK PAdES method
                 value: { format: pades, method: physical, document: JVBERi0xLjQK }
-              smartId:
-                summary: Optional Smart-ID PAdES method
-                value: { format: pades, method: smart_id, personalCode: '39001010000', document: JVBERi0xLjQK }
-              mobileId:
-                summary: Optional Mobile-ID PAdES method
-                value: { format: pades, method: mobile_id, personalCode: '39001010000', phoneNumber: '+37061234567', document: JVBERi0xLjQK }
+              nfc:
+                summary: ATK by NFC phone tap
+                value: { format: pades, method: nfc, document: JVBERi0xLjQK }
       responses:
         '202':
-          description: Request created; awaiting the ATK client or remote user authorization.
+          description: Request created; awaiting the ATK client authorization.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/SignRequestCreated' }
@@ -201,7 +196,7 @@ paths:
         `notApplicable` in sandbox/raw, or the internal ADOC verdict). `finalizing` is observable via
         GET only if a crash wedges the request until the reaper releases it. Retry-safe; a transient
         assembly failure returns a retryable 5xx with the operation released; one `atk.sign` charge
-        at `done`. Physical/NFC only; remote methods complete asynchronously.
+        at `done`.
       security: [ { clientToken: [] } ]
       parameters: [ { $ref: '#/components/parameters/RequestId' } ]
       requestBody:
@@ -485,7 +480,7 @@ components:
         authorization: { type: string, maxLength: 2048 }
 
     SignRequestCreate:
-      description: ATK supports every listed format; Smart-ID/Mobile-ID support PAdES only.
+      description: The ATK card signs every listed format, by physical reader or NFC.
       oneOf:
         - title: ATK raw detached CAdES
           type: object
@@ -520,58 +515,17 @@ components:
               properties: { document: {} }
             - required: [documentRef]
               properties: { documentRef: {} }
-        - title: Smart-ID PAdES
-          type: object
-          required: [format, method, personalCode]
-          additionalProperties: false
-          properties:
-            format: { type: string, const: pades }
-            method: { type: string, const: smart_id }
-            personalCode: { type: string, pattern: '^[0-9]{11}$', example: '39001010000' }
-            document: { type: string, format: byte }
-            documentRef: { $ref: '#/components/schemas/DocumentRef' }
-            filename: { type: string }
-            mimeType: { type: string }
-            message: { type: string }
-            externalId: { type: string }
-            webhookUrl: { type: string, format: uri }
-          oneOf:
-            - required: [document]
-              properties: { document: {} }
-            - required: [documentRef]
-              properties: { documentRef: {} }
-        - title: Mobile-ID PAdES
-          type: object
-          required: [format, method, personalCode, phoneNumber]
-          additionalProperties: false
-          properties:
-            format: { type: string, const: pades }
-            method: { type: string, const: mobile_id }
-            personalCode: { type: string, pattern: '^[0-9]{11}$', example: '39001010000' }
-            phoneNumber: { type: string, pattern: '^\+3706[0-9]{7}$', example: '+37061234567' }
-            document: { type: string, format: byte }
-            documentRef: { $ref: '#/components/schemas/DocumentRef' }
-            filename: { type: string }
-            mimeType: { type: string }
-            message: { type: string }
-            externalId: { type: string }
-            webhookUrl: { type: string, format: uri }
-          oneOf:
-            - required: [document]
-              properties: { document: {} }
-            - required: [documentRef]
-              properties: { documentRef: {} }
 
     SignRequestCreated:
       type: object
       required: [requestId, method, verificationCode, status, expiresAt]
-      description: Physical requests return `clientToken`; NFC returns `pairing`; remote methods return neither.
+      description: Physical requests return `clientToken`; NFC returns `pairing`.
       properties:
         requestId: { type: string, format: uuid }
         method: { $ref: '#/components/schemas/Method' }
         verificationCode:
           type: string
-          description: NFC anti-relay code, or the user verification code for Smart-ID/Mobile-ID.
+          description: NFC anti-relay confirmation code.
         clientToken: { type: string }
         status: { $ref: '#/components/schemas/Status' }
         expiresAt: { type: string, format: date-time }
@@ -757,9 +711,6 @@ components:
         requestId: { type: string, format: uuid }
         method: { $ref: '#/components/schemas/Method' }
         status: { $ref: '#/components/schemas/Status' }
-        verificationCode:
-          type: string
-          description: Present while a Smart-ID/Mobile-ID request is non-terminal.
         validation: { $ref: '#/components/schemas/Validation' }
         cert:
           type: object
@@ -774,9 +725,9 @@ components:
 
     Method:
       type: string
-      enum: [physical, nfc, smart_id, mobile_id]
+      enum: [physical, nfc]
       example: physical
-      description: physical/NFC use card endpoints; smart_id/mobile_id complete server-side and support PAdES only.
+      description: physical = desktop reader; nfc = phone tap.
 
     Status:
       type: string

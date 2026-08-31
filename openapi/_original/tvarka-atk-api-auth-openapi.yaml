@@ -2,8 +2,8 @@ openapi: 3.1.0
 
 info:
   title: Tvarka ATK - eID Authentication API
-  version: 1.3.0
-  summary: LT ATK authentication, with optional Smart-ID and Mobile-ID server-side methods.
+  version: 1.4.0
+  summary: Card-native LT ATK eID authentication, by physical reader or NFC.
   description: |
     Card-native LT eID (ATK) **authentication** (login). A relying party sends its user through a
     challenge-response: the user's ATK card signs a server-issued, audience-bound challenge with its
@@ -11,7 +11,7 @@ info:
     certificate, raw signature, optional assertion}`. It is a proof of possession + PIN, not a
     qualified signature.
 
-    This is scope v15 of `tvarka_atk_qes_api_spec.md`, the `/v1/auth/*` slice. It is **one API, two
+    This is scope v16 of `tvarka_atk_qes_api_spec.md`, the `/v1/auth/*` slice. It is **one API, two
     tiers**:
       * **Free tier (Surface A):** auth only, zero-rated. National services (ePaslaugos, Sodra) are
         registered *providers* on this tier. This document + a reference client is what ePaslaugos
@@ -32,13 +32,9 @@ info:
       4. `POST /v1/auth/{requestId}/complete` (Bearer clientToken) - the client submits the raw signature
          + the single-use `operationToken`; the API verifies it and returns the verified identity.
 
-    ## Smart-ID and Mobile-ID flow (server-side)
-      1. `POST /v1/auth/requests` uses `method:"smart_id"` or `method:"mobile_id"`, with
-         `personalCode` and, for Mobile-ID, `phoneNumber`.
-      2. The response contains the user verification code and no `clientToken`. Display the code and
-         poll `GET /v1/auth/{requestId}` with Basic credentials (or consume the terminal webhook).
-      3. ATK verifies the returned certificate, Lithuanian identity, audience-bound signature, trust,
-         key usage, and revocation before publishing `status:"done"`.
+    This API is deliberately **card-only** (v1.4): the LT ATK card by physical reader or NFC phone
+    tap. Remote methods such as Smart-ID and Mobile-ID are not offered here - for hosted remote-method
+    signing ceremonies, use the Tvarka Sign developer API (<https://sign-api.tvarka.pro/docs>).
 
     ## Card facts
       * Access is fixed CAN + PIN over PACE; one user PIN. **CAN and PIN never reach this API** - they are
@@ -60,7 +56,7 @@ info:
     name: Proprietary
     url: https://tvarka.pro
   x-status: >-
-    IMPLEMENTED through 2026-08-02 (tvarka/atk/ Django app): /auth/* physical, NFC, Smart-ID, and Mobile-ID ceremonies + provider
+    IMPLEMENTED through 2026-08-29 (tvarka/atk/ Django app): /auth/* physical and NFC ceremonies + provider
     credentials + tokens + `assertion` JWT + JWKS (/.well-known/atk-jwks.json) + per-provider rate limiting
     + retention/deletion (POST /v1/auth/{id}/delete, POST /v1/erasure). Sandbox IMPLEMENTED: providers with
     environment=sandbox may present test cards chained to ATK_SANDBOX_TRUST_ANCHORS_PEM (production LT chain
@@ -69,6 +65,9 @@ info:
     Android/iOS ATK client source and Tvarka's internal NFC login bridge are implemented behind independent
     flags. The published production mobile support boundary is Android; iOS remains pre-release until its
     CoreNFC real-card/session-budget release gate passes.
+    v1.4 (2026-08-29) REMOVED the v1.3 opt-in Smart-ID/Mobile-ID server-side methods before any
+    provider was entitled to them - this API is LT ATK card-only by design; remote-method ceremonies
+    live in the Tvarka Sign developer API.
     Provider (tenant) management is internal (Django admin + the /ops/atk panel) and is not part of
     this public contract; the provider data model lives in spec section 9.
 
@@ -103,20 +102,20 @@ paths:
       description: |
         Called by the provider's backend with HTTP Basic (`keyId:keySecret`). `audience` must be an
         exact origin on the provider's allow-list. Physical requests return a short-lived `clientToken`;
-        NFC requests return a pairing hint; Smart-ID/Mobile-ID requests remain entirely server-side.
+        NFC requests return a pairing hint.
       x-codeSamples:
         - lang: curl
-          label: Smart-ID
+          label: Physical reader
           source: |
             curl -u "$ATK_KEY_ID:$ATK_KEY_SECRET" https://atk.tvarka.pro/v1/auth/requests \
               -H 'Content-Type: application/json' \
-              -d '{"audience":"https://app.example","method":"smart_id","personalCode":"39001010000"}'
+              -d '{"audience":"https://app.example","method":"physical"}'
         - lang: curl
-          label: Mobile-ID
+          label: NFC phone tap
           source: |
             curl -u "$ATK_KEY_ID:$ATK_KEY_SECRET" https://atk.tvarka.pro/v1/auth/requests \
               -H 'Content-Type: application/json' \
-              -d '{"audience":"https://app.example","method":"mobile_id","personalCode":"39001010000","phoneNumber":"+37061234567"}'
+              -d '{"audience":"https://app.example","method":"nfc"}'
       security:
         - basicAuth: []
       requestBody:
@@ -128,15 +127,12 @@ paths:
               physicalAtk:
                 summary: Primary ATK desktop-reader method
                 value: { audience: https://app.example, method: physical }
-              smartId:
-                summary: Optional Smart-ID method
-                value: { audience: https://app.example, method: smart_id, personalCode: '39001010000' }
-              mobileId:
-                summary: Optional Mobile-ID method
-                value: { audience: https://app.example, method: mobile_id, personalCode: '39001010000', phoneNumber: '+37061234567' }
+              nfc:
+                summary: ATK by NFC phone tap
+                value: { audience: https://app.example, method: nfc }
       responses:
         '202':
-          description: Request created; awaiting the ATK client or remote user authorization.
+          description: Request created; awaiting the ATK client authorization.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AuthRequestCreated' }
@@ -155,7 +151,6 @@ paths:
         Called by the client with `Authorization: Bearer <clientToken>`. The API validates the
         certificate (chain, revocation, purpose = authentication, key usage), builds the canonical
         challenge, and returns the exact `dtbs` the card must sign plus a single-use `operationToken`.
-        Physical/NFC only; server-side methods do not call this endpoint.
       security:
         - clientToken: []
       parameters:
@@ -188,7 +183,6 @@ paths:
         certificate's public key, enforces the identity-swap guard, and returns the verified identity
         (and the optional `assertion` JWT). Retry-safe: a repeat with the same tuple returns the same
         result; a different signature/cert after the token is claimed is rejected.
-        Physical/NFC only; server-side methods complete asynchronously.
       security:
         - clientToken: []
       parameters:
@@ -216,9 +210,7 @@ paths:
       operationId: getAuthRequest
       summary: Poll request status / fetch the result
       description: |
-        Readable with the provider's Basic credentials for every method, or with the request's
-        `clientToken` for physical/NFC requests. Smart-ID/Mobile-ID providers poll this endpoint or
-        consume the terminal webhook.
+        Readable with the provider's Basic credentials, or with the request's `clientToken`.
       security:
         - basicAuth: []
         - clientToken: []
@@ -422,9 +414,9 @@ components:
 
     Method:
       type: string
-      enum: [physical, nfc, smart_id, mobile_id]
+      enum: [physical, nfc]
       example: physical
-      description: physical = desktop reader; nfc = phone tap; smart_id/mobile_id = server-side remote eID.
+      description: physical = desktop reader; nfc = phone tap.
 
     Status:
       type: string
@@ -469,48 +461,12 @@ components:
       type: object
       required: [audience, method]
       additionalProperties: false
-      oneOf:
-        - title: Physical ATK
-          properties: { method: { const: physical } }
-          not:
-            anyOf:
-              - required: [personalCode]
-                properties: { personalCode: {} }
-              - required: [phoneNumber]
-                properties: { phoneNumber: {} }
-        - title: ATK over NFC
-          properties: { method: { const: nfc } }
-          not:
-            anyOf:
-              - required: [personalCode]
-                properties: { personalCode: {} }
-              - required: [phoneNumber]
-                properties: { phoneNumber: {} }
-        - title: Smart-ID
-          required: [personalCode]
-          properties: { method: { const: smart_id } }
-          not:
-            required: [phoneNumber]
-            properties: { phoneNumber: {} }
-        - title: Mobile-ID
-          required: [personalCode, phoneNumber]
-          properties: { method: { const: mobile_id } }
       properties:
         audience:
           type: string
           description: The relying-party origin (must be exactly on the provider's allow-list), e.g. https://www.epaslaugos.lt.
           example: https://www.epaslaugos.lt
         method: { $ref: '#/components/schemas/Method' }
-        personalCode:
-          type: string
-          pattern: '^[0-9]{11}$'
-          example: '39001010000'
-          description: Required for Smart-ID and Mobile-ID; rejected for physical/NFC.
-        phoneNumber:
-          type: string
-          pattern: '^\+3706[0-9]{7}$'
-          example: '+37061234567'
-          description: Required for Mobile-ID, rejected for every other method.
         message:
           type: string
           description: Optional short message the client may display to the user.
@@ -525,16 +481,16 @@ components:
     AuthRequestCreated:
       type: object
       required: [requestId, method, verificationCode, status, expiresAt]
-      description: Physical requests return `clientToken`; NFC requests return `pairing`; remote methods return neither.
+      description: Physical requests return `clientToken`; NFC requests return `pairing`.
       properties:
         requestId: { type: string, format: uuid }
         method: { $ref: '#/components/schemas/Method' }
         verificationCode:
           type: string
-          description: NFC anti-relay code, or the user verification code for Smart-ID/Mobile-ID.
+          description: NFC anti-relay confirmation code.
         clientToken:
           type: string
-          description: Scoped bearer JWT for physical-card `/certificate` + `/complete`; absent for remote methods.
+          description: Scoped bearer JWT for physical-card `/certificate` + `/complete`.
         status: { $ref: '#/components/schemas/Status' }
         expiresAt: { type: string, format: date-time }
         challengeProfile:
@@ -645,9 +601,6 @@ components:
         requestId: { type: string, format: uuid }
         method: { $ref: '#/components/schemas/Method' }
         status: { $ref: '#/components/schemas/Status' }
-        verificationCode:
-          type: string
-          description: Present while a Smart-ID/Mobile-ID request is non-terminal.
         nonce:
           type: string
           description: Server-minted challenge nonce (see `Challenge`) - enables independent `sig` verification from polling alone.
@@ -826,5 +779,5 @@ components:
         Retry-After: { schema: { type: integer }, description: Seconds. }
       content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
     ServiceUnavailable:
-      description: A required remote or erasure service is temporarily unavailable.
+      description: A required backing or erasure service is temporarily unavailable.
       content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }

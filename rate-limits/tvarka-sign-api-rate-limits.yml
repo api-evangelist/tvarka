@@ -1,0 +1,47 @@
+generated: '2026-08-31'
+method: searched
+source: https://sign-api.tvarka.pro/docs
+docs:
+  - https://sign-api.tvarka.pro/docs
+  - openapi/tvarka-sign-api-openapi.yml
+signal:
+  status: 429
+  problem_type: rfc9457 (application/problem+json)
+  retry_header: null
+  rate_limit_headers: []
+  note: >-
+    429 is declared on all 21 operations, but the contract publishes NO RateLimit-* headers, no
+    Retry-After and no numeric quota, so an agent learns it is throttled only from the status code
+    and cannot compute a backoff from the response.
+  applies_to_operations: [addComment, addSigner, archiveSigning, cancelSigning, createBatch, createSigning, deleteFile, downloadSignedDocument, eraseSigning, eraseSignings, getBatch, getFile, getSigning, listComments, listSignings, remindSigner, removeSigner, simulateSigning, updateSignerMethods, updateSigning, uploadFile]
+rate_limits:
+  - scope: per-signer
+    operation: remindSigner
+    tool: remind_signer
+    window: 1 hour
+    limit: 1
+    unit: reminder
+    enforcement: 'documented in the docs page and in the MCP tool description; the contract returns 409/429 rather than naming the limit'
+    source: https://sign-api.tvarka.pro/docs
+limit_count: 1
+published_quotas: false
+size_limits:
+  - scope: container composition
+    limit: up to 20 files composed into one package
+    source: https://sign-api.tvarka.pro/llms.txt
+  - scope: signers per ceremony
+    limit: 20
+    source: 'openapi/tvarka-sign-api-openapi.yml -> request_signatures/createSigning signers maxItems 20'
+other_throttles:
+  - kind: commercial precondition
+    status: 402
+    operations: [createSigning, createBatch, addSigner]
+    note: >-
+      Not a rate limit, but the other way a write is refused at the gate. The problem body may carry
+      recoveryUrl pointing a human operator at the tenant's payment setup.
+note: >-
+  An honest partial: exactly one numeric limit is published for this API. Everything else about
+  throttling is undocumented, which is a real gap for an agent-facing surface that ships an MCP
+  server.
+related:
+  atk_api: rate-limits/tvarka-atk-api-rate-limits.yml

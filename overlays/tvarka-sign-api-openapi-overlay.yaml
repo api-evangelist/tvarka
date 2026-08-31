@@ -1,0 +1,78 @@
+overlay: 1.0.0
+info:
+  title: API Evangelist enhancements for the Tvarka Sign API
+  version: 1.0.0
+extends: openapi/tvarka-sign-api-openapi.yml
+x-provenance:
+  generated: '2026-08-31'
+  method: generated
+  source: openapi/tvarka-sign-api-openapi.yml
+  note: >-
+    Non-destructive enhancements over the provider's published contract, fetched verbatim from
+    https://sign-api.tvarka.pro/openapi.yaml on 2026-08-31. Every action below either links an
+    artifact in this repo or records an observation made from the contract and the provider's own
+    docs; none of it changes the provider's semantics.
+actions:
+  - target: $.info
+    description: Link the harvested API Evangelist artifact set from the contract itself.
+    update:
+      x-apievangelist-artifacts:
+        authentication: authentication/tvarka-sign-api-authentication.yml
+        conventions: conventions/tvarka-sign-api-conventions.yml
+        errors: errors/tvarka-sign-api-problem-types.yml
+        webhooks: asyncapi/tvarka-sign-api-webhooks.yml
+        sandbox: sandbox/tvarka-sign-api-sandbox.yml
+        rate_limits: rate-limits/tvarka-sign-api-rate-limits.yml
+        mcp: mcp/tvarka-sign-api-mcp.yml
+        tool_crosswalk: mcp/tvarka-sign-api-tool-crosswalk.yml
+        skills: skills/tvarka-sign-api-request-signatures.md
+        sibling_api: openapi/_original/tvarka-atk-api-openapi-original.json
+  - target: $.info
+    description: >-
+      Record the live agent surface. The contract does not mention the MCP server; the docs page and
+      llms.txt do, and it was probed anonymously.
+    update:
+      x-apievangelist-agent-surface:
+        mcp_endpoint: https://sign-api.tvarka.pro/mcp
+        mcp_registry_name: pro.tvarka/sign
+        mcp_transport: Streamable HTTP
+        mcp_tools: 6
+        mcp_discovery_auth: none
+        mcp_probed: '2026-08-31'
+        llms_txt: https://sign-api.tvarka.pro/llms.txt
+  - target: $.info
+    description: >-
+      Record the reversibility contract - which writes can be taken back and exactly where reversal
+      stops. Derived from the operation descriptions, not invented.
+    update:
+      x-apievangelist-reversibility:
+        grade: verified
+        reversal_pairs:
+          createSigning: [cancelSigning, eraseSigning]
+          addSigner: [removeSigner]
+          uploadFile: [deleteFile]
+        irreversible:
+          - The qualified signature itself - it is a human act, and no operation revokes it.
+          - archiveSigning - the upgrade adds a version rather than replacing one, but there is no downgrade.
+        boundary: >-
+          cancelSigning retracts only UNUSED invitations. Signatures already collected remain valid
+          and the signed document remains downloadable.
+        detail: conventions/tvarka-sign-api-conventions.yml
+  - target: $.info
+    description: >-
+      Flag the one gap an integrator will meet first, so it is visible from the contract rather than
+      only from prose.
+    update:
+      x-apievangelist-observations:
+        - >-
+          No request idempotency header exists on this API. A blind retry of createSigning raises a
+          SECOND ceremony and bills a second time. Correlate with the caller-supplied externalId and
+          check listSignings before retrying. (The sibling ATK API does require
+          X-Atk-Idempotency-Key on its trust services, so the estate is inconsistent on this point.)
+        - >-
+          429 is declared on all 21 operations but the contract publishes no Retry-After and no
+          RateLimit-* headers, so an agent cannot compute a backoff from the response. The only
+          published numeric limit is one reminder per signer per hour.
+        - >-
+          Errors are genuinely RFC 9457, and body validation COLLECTS every fault into one response
+          with an errors[] array of JSON Pointer + detail rather than failing fast.

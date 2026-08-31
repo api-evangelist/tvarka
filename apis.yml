@@ -1,12 +1,12 @@
 name: Tvarka ATK API
-description: >-
-  A single REST API for Lithuanian eID authentication and qualified electronic signing (QES), plus validation,
-  timestamping and long-term-validation (LTV)/archive trust services. The primary ceremonies read the Lithuanian
-  identity card (ATK) through a physical smart-card reader or an NFC phone tap, with Smart-ID and Mobile-ID as
-  optional server-side methods under the same request, polling, webhook and metering model. Signing produces PAdES,
-  ASiC-E, ADOC or detached CAdES artifacts with a qualified timestamp and an advisory validation axis. eIDAS-aligned
-  and EU-resident, operated from Lithuania by Advokato M. Kiskio kontora INVENT and Socialiniai algoritmai, UAB, and
-  priced per successful operation with no subscription or minimum.
+description: A single REST API estate for Lithuanian eID authentication and qualified electronic signing (QES). The ATK API
+  reads the Lithuanian identity card itself - physical smart-card reader or NFC phone tap - through one request, polling,
+  webhook and metering model, and adds standalone validation, timestamping and long-term-validation (LTV)/archive trust services;
+  contract 1.4.0 withdrew the short-lived Smart-ID and Mobile-ID passthrough, so the ATK surface is deliberately card-only.
+  Hosted remote-method ceremonies moved to the separate Tvarka Sign API (sign-api.tvarka.pro), an orchestration contract with
+  RFC 9457 problem details and a live, anonymously introspectable MCP server at /mcp. eIDAS-aligned and EU-resident, operated
+  from Lithuania by Advokato M. Kiskio kontora INVENT and Socialiniai algoritmai, UAB, and priced per successful operation
+  with no subscription or minimum.
 deliveryModel:
   model: saas
   open_source: false
@@ -20,44 +20,47 @@ deliveryModel:
   generated: '2026-08-28'
   method: derived
 image: https://tvarka.pro/static/img/tvarka-logo-closer.53b2d1b2a9b0.svg
-url: https://raw.githubusercontent.com/api-evangelist/tvarka-atk-api/refs/heads/main/apis.yml
+url: https://atk.tvarka.pro/apis.json
 created: '2026-08-02'
-modified: '2026-08-09'
+modified: '2026-08-31'
 specificationVersion: '0.23'
 tags:
-  - Authentication
-  - Digital Signature
-  - eIDAS
-  - QES
-  - Lithuania
-  - OpenAPI
-  - eID
-  - Smart-ID
-  - Mobile-ID
-  - NFC
-  - Timestamping
-  - LTV
-  - Webhook
-  - Identity
-  - Trust Services
-  - GDPR
+- Authentication
+- Digital Signature
+- eIDAS
+- QES
+- Lithuania
+- OpenAPI
+- eID
+- Smart-ID
+- Mobile-ID
+- NFC
+- Timestamping
+- LTV
+- Webhook
+- Identity
+- Trust Services
+- GDPR
+- MCP
+- Agent Ready
+- Electronic Signature
 tags_raw:
-  - Authentication
-  - Digital Signature
-  - eIDAS
-  - QES
-  - Lithuania
-  - OpenAPI
-  - eID
-  - Smart-ID
-  - Mobile-ID
-  - NFC
-  - Timestamping
-  - LTV
-  - Webhooks
-  - Identity
-  - Trust Services
-  - GDPR
+- Authentication
+- Digital Signature
+- eIDAS
+- QES
+- Lithuania
+- OpenAPI
+- eID
+- Smart-ID
+- Mobile-ID
+- NFC
+- Timestamping
+- LTV
+- Webhooks
+- Identity
+- Trust Services
+- GDPR
 apis:
 - aid: tvarka-atk-api:tvarka-atk-api-auth-api
   name: Tvarka ATK API Auth API
@@ -159,8 +162,6 @@ apis:
   tags:
   - Tvarka ATK API
   properties:
-  - type: OpenAPI
-    url: openapi/tvarka-atk-api-tvarka-atk-api-api-openapi.yml
   - type: PostmanCollection
     url: https://atk.tvarka.pro/postman/auth.json
   - type: PostmanCollection
@@ -171,17 +172,14 @@ apis:
     url: https://atk.tvarka.pro/apis.json
 - aid: tvarka-atk-api:tvarka-atk-api-tvarka-atk-qes-signing-api-paid-tier-addendum-api
   name: Tvarka ATK API Tvarka ATK QES Signing API (paid Tier Addendum) API
-  description: >-
-    The Tvarka ATK QES Signing API (paid Tier Addendum) API from Tvarka ATK API — 0 operation(s) for tvarka
-    atk qes signing api (paid tier addendum).
+  description: The Tvarka ATK QES Signing API (paid Tier Addendum) API from Tvarka ATK API — 0 operation(s) for tvarka atk
+    qes signing api (paid tier addendum).
   humanURL: https://atk.tvarka.pro/docs/
   baseURL: https://atk.tvarka.pro/v1
   tags: []
   tags_raw:
   - Tvarka ATK QES Signing API (paid Tier Addendum)
   properties:
-  - type: OpenAPI
-    url: openapi/tvarka-atk-api-tvarka-atk-qes-signing-api-paid-tier-addendum-api-openapi.yml
   - type: PostmanCollection
     url: https://atk.tvarka.pro/postman/auth.json
   - type: PostmanCollection
@@ -228,24 +226,80 @@ apis:
     url: https://atk.tvarka.pro/docs/
   - type: APIsJSON
     url: https://atk.tvarka.pro/apis.json
+- aid: tvarka-atk-api:tvarka-sign-api
+  name: Tvarka Sign API
+  description: 'Machine channel for Tvarka Sign: post a document and a list of signers and Tvarka runs its ordinary qualified
+    signing ceremony for each of them on the hosted page or in the Tvarka Sign mobile app (LT ATK over NFC, Smart-ID, Mobile-ID).
+    Nothing in the API signs anything - a signature is always a human act with the signer''s own eID - so every operation
+    is about getting a document in front of the right person and learning what they did. Orchestration sibling of the card-level
+    ATK API; RFC 9457 problem details, HMAC-signed webhooks, and a hosted MCP server.'
+  version: 1.2.1
+  created: '2026-08-31'
+  modified: '2026-08-31'
+  baseURL: https://sign-api.tvarka.pro
+  humanURL: https://sign-api.tvarka.pro/docs
+  tags:
+  - Digital Signature
+  - QES
+  - eIDAS
+  - Lithuania
+  - OpenAPI
+  - MCP
+  - Webhooks
+  - Identity
+  properties:
+  - type: OpenAPI
+    url: openapi/tvarka-sign-api-openapi.yml
+  - type: OpenAPI
+    name: Provider-hosted contract
+    url: https://sign-api.tvarka.pro/openapi.json
+    mediaType: application/vnd.oai.openapi+json;version=3.1
+  - type: Documentation
+    url: https://sign-api.tvarka.pro/docs
+  - type: APIReference
+    url: https://sign-api.tvarka.pro/docs
+  - type: MCPServer
+    url: mcp/tvarka-sign-api-mcp.yml
+  - type: ToolCrosswalk
+    url: mcp/tvarka-sign-api-tool-crosswalk.yml
+  - type: LLMsTxt
+    url: llms/tvarka-sign-api-llms.txt
+  - type: Authentication
+    url: authentication/tvarka-sign-api-authentication.yml
+  - type: ErrorCatalog
+    url: errors/tvarka-sign-api-problem-types.yml
+  - type: Webhooks
+    url: asyncapi/tvarka-sign-api-webhooks.yml
+  - type: Sandbox
+    url: sandbox/tvarka-sign-api-sandbox.yml
+  - type: Conventions
+    url: conventions/tvarka-sign-api-conventions.yml
+  - type: Overlay
+    url: overlays/tvarka-sign-api-openapi-overlay.yaml
+  - type: DataModel
+    url: data-model/tvarka-sign-api-data-model.yml
+  - type: RateLimits
+    url: rate-limits/tvarka-sign-api-rate-limits.yml
+  - type: AgentSkill
+    url: skills/tvarka-sign-api-request-signatures.md
 maintainers:
-  - FN: Tvarka API team
-    email: info@tvarka.pro
-    organizationName: Tvarka
-    url: https://tvarka.pro
+- FN: Tvarka API team
+  email: info@tvarka.pro
+  organizationName: Tvarka
+  url: https://atk.tvarka.pro/docs/
 generated:
   by: apis.io/add
   model: claude-opus-4-8
   confidence: 95
   at: '2026-08-02T22:54:13.353Z'
 x-enrichment:
-  date: '2026-08-09'
+  date: '2026-08-31'
   status: enriched
-  artifacts_added: 36
+  artifacts_added: 17
   pass: local-v1
 common:
 - type: AgenticAccess
-  url: agentic-access/tvarka-atk-api-agentic-access.yml
+  url: agentic-access/tvarka-agentic-access.yml
 - type: DomainSecurity
   url: security/tvarka-atk-api-domain-security.yml
 - type: Authentication
@@ -283,7 +337,7 @@ common:
 - type: LLMsTxt
   url: llms/tvarka-atk-api-llms.txt
 - type: MCPServer
-  url: mcp/tvarka-atk-api-mcp.yml
+  url: mcp/tvarka-sign-api-mcp.yml
 - type: Overlay
   url: overlays/tvarka-atk-api-openapi-overlay.yaml
 - type: Conformance
@@ -331,3 +385,41 @@ common:
 - type: Arazzo
   name: Validate, timestamp and archive an existing signed document
   url: arazzo/tvarka-atk-api-timestamp-and-archive.yml
+- type: ToolCrosswalk
+  url: mcp/tvarka-sign-api-tool-crosswalk.yml
+- type: SecurityTxt
+  url: well-known/tvarka-security.txt
+- type: APIsJSON
+  url: https://atk.tvarka.pro/apis.json
+- type: LLMsTxt
+  name: Tvarka Sign API (provider-published)
+  url: llms/tvarka-sign-api-llms.txt
+- type: Webhooks
+  name: Tvarka Sign API signing events
+  url: asyncapi/tvarka-sign-api-webhooks.yml
+- type: ErrorCatalog
+  name: Tvarka Sign API RFC 9457 problem types
+  url: errors/tvarka-sign-api-problem-types.yml
+- type: Sandbox
+  name: Tvarka Sign API sandbox
+  url: sandbox/tvarka-sign-api-sandbox.yml
+- type: Conventions
+  name: Tvarka Sign API conventions
+  url: conventions/tvarka-sign-api-conventions.yml
+- type: Authentication
+  name: Tvarka Sign API authentication
+  url: authentication/tvarka-sign-api-authentication.yml
+- type: HelpCenter
+  url: https://tvarka.pro/pagalba/
+- type: Overlay
+  name: Tvarka Sign API overlay
+  url: overlays/tvarka-sign-api-openapi-overlay.yaml
+- type: DataModel
+  name: Tvarka Sign API data model
+  url: data-model/tvarka-sign-api-data-model.yml
+- type: RateLimits
+  name: Tvarka Sign API rate limits
+  url: rate-limits/tvarka-sign-api-rate-limits.yml
+type: Index
+position: Producing
+access: 3rd-Party

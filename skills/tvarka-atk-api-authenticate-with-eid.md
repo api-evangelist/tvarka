@@ -4,7 +4,7 @@ description: >-
   Run the ATK authentication ceremony end to end - create an audience-bound request from your
   backend, drive the card on the holder's device, and verify the returned identity yourself.
 api: openapi/tvarka-atk-api-openapi-original.json
-generated: '2026-08-09'
+generated: '2026-08-31'
 method: generated
 source: https://atk.tvarka.pro/docs/quickstart/
 operations:
@@ -30,11 +30,11 @@ Base URL `https://atk.tvarka.pro/v1`. Two credentials, two places:
 `createAuthRequest` — `POST /auth/requests`.
 
 Body: `audience` (required — the exact origin approved for your provider), `method` (required —
-`physical`, `nfc`, `smart_id` or `mobile_id`), optionally `personalCode`, `phoneNumber`, `message`,
-`externalId`, `webhookUrl`.
+`physical` or `nfc`; contract 1.4.0 removed `smart_id` and `mobile_id`, and remote-method ceremonies
+now live in the Tvarka Sign API), optionally `message`, `externalId`, `webhookUrl`.
 
-A 202 returns `requestId`, `verificationCode`, `status`, `expiresAt`, and for card methods
-`clientToken`, `nonce`, `challengeProfile` and a `pairing` hint.
+A 202 returns `requestId`, `verificationCode`, `status`, `expiresAt`, plus `clientToken`, `nonce`,
+`challengeProfile` for `physical` and a `pairing` hint for `nfc`.
 
 If `audience` does not match an approved origin you get **403 `origin_not_allowed`**. A malformed
 `webhookUrl` is rejected at creation with **400 `invalid_webhook_url`**.

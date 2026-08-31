@@ -1,0 +1,48 @@
+generated: '2026-08-31'
+method: derived
+source: openapi/tvarka-sign-api-openapi.yml
+docs: https://sign-api.tvarka.pro/docs
+format: rfc9457
+rfc9457: true
+note: >-
+  Unlike the ATK API, which uses a custom {code, message, requestId} envelope, the Sign API is
+  genuinely RFC 9457. The contract declares a Problem schema with type/title/status/detail and
+  serves it as application/problem+json.
+envelope:
+  media_type: application/problem+json
+  schema: '#/components/schemas/Problem'
+  fields:
+    - {name: type, type: string, format: uri, required: true}
+    - {name: title, type: string, required: true}
+    - {name: status, type: integer, required: true}
+    - {name: detail, type: string, required: false}
+    - name: errors
+      type: array
+      items: '#/components/schemas/ProblemFieldError'
+      required: false
+      note: >-
+        Present on validation-failed and on single-fault problems that name a field. Request-body
+        validation COLLECTS rather than failing fast, so a caller who got three fields wrong learns
+        all three from one response - a materially agent-friendly choice.
+    - name: recoveryUrl
+      type: string
+      format: uri-reference
+      required: false
+      note: >-
+        Present on the payment-required refusal when a web page exists that fixes it - the tenant's
+        payment setup, reached with an ordinary browser login. Show it to a human operator; it is
+        not an API endpoint an agent should call.
+problems:
+  - {status: 400, title: Request rejected, note: 'Body/parameter validation; carries errors[] of JSON Pointer + detail.', operations: [addComment, addSigner, createBatch, createSigning, eraseSignings, listSignings, simulateSigning, updateSignerMethods, updateSigning, uploadFile]}
+  - {status: 401, title: Unauthenticated, note: 'Missing or revoked bearer key.', operations: [every operation]}
+  - {status: 402, title: Payment required, note: 'Workspace funding precondition; may carry recoveryUrl.', operations: [addSigner, createBatch, createSigning]}
+  - {status: 403, title: Forbidden, note: 'simulateSigning is sandbox-key-only; createSigning can be refused by policy.', operations: [createSigning, simulateSigning]}
+  - {status: 404, title: Not found, operations: [addComment, addSigner, archiveSigning, cancelSigning, deleteFile, downloadSignedDocument, eraseSigning, getBatch, getFile, getSigning, listComments, remindSigner, removeSigner, simulateSigning, updateSignerMethods, updateSigning]}
+  - {status: 409, title: Conflict with signing state, note: 'The dominant agent-facing error: the ceremony is not in a state that permits this action (already terminal, signer already signed, already archived).', operations: [addSigner, archiveSigning, cancelSigning, downloadSignedDocument, remindSigner, removeSigner, simulateSigning, updateSignerMethods, updateSigning]}
+  - {status: 422, title: Unprocessable document, note: 'Format refusals - e.g. ADOC is refused by name for archiveSigning because ADOC-V1.0 specifies XAdES-T.', operations: [archiveSigning, createSigning]}
+  - {status: 429, title: Too many requests, note: 'Declared on every operation. The contract does not publish numeric limits or RateLimit-* headers; remind_signer is documented at one reminder per signer per hour.', operations: [every operation]}
+  - {status: 503, title: Backing service unavailable, operations: [createSigning, eraseSigning]}
+coverage:
+  operations_total: 21
+  operations_with_4xx: 21
+  distinct_statuses: [400, 401, 402, 403, 404, 409, 422, 429, 503]

@@ -1,0 +1,45 @@
+generated: '2026-08-31'
+method: searched
+source: https://sign-api.tvarka.pro/docs
+docs:
+  - https://sign-api.tvarka.pro/docs
+  - https://sign-api.tvarka.pro/llms.txt
+  - openapi/tvarka-sign-api-openapi.yml
+model: key-prefix
+separation:
+  production_prefix: tsk_live_
+  sandbox_prefix: tsk_test_
+  host: >-
+    Same host and base URL for both (https://sign-api.tvarka.pro). Environment is a property of the
+    key prefix, not of the endpoint.
+  billing: >-
+    A tsk_test_ key opens REAL ceremonies but is exempt from the funding precondition, so no 402 and
+    no per-signature charge.
+simulation:
+  operation: simulateSigning
+  path: POST /v1/signings/{signingId}/simulate
+  keys: sandbox only (a tsk_live_ key gets 403)
+  outcomes: [completed, declined, expired]
+  behaviour: >-
+    Moves a signing to a terminal state so an integrator can exercise each path without waiting for
+    a human. On "complete" the signer status is `simulated` and the completion mode is
+    `sandbox_simulation`.
+  artifact: >-
+    A real downloadable artifact IS returned so download, hashing and storage code can be exercised
+    end to end - flagged sandbox true in both the response and the webhook.
+  honesty_boundary: >-
+    The sandbox NEVER adds a signature. An unsigned PDF comes back as the caller's own pages with a
+    banner saying it is not signed; anything posted already signed comes back byte-identical. Tvarka
+    issues no test signatures. This is the provider's own stated position, and it is the reason
+    there are no "magic test values" to capture - there is no fake eID.
+access:
+  request: info@tvarka.pro
+  cost: A sandbox tenant costs nothing and its key works before any funding.
+test_material:
+  note: >-
+    No test cards, test personal codes or test phone numbers are published, by design - a signature
+    requires a real person with a real eID. The ATK API publishes a deterministic test PDF
+    (https://atk.tvarka.pro/test-data/atk-test.pdf, SHA-256 published alongside) that is equally
+    usable as an input document here.
+related:
+  atk_api: sandbox/tvarka-atk-api-sandbox.yml

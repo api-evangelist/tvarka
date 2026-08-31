@@ -1,10 +1,11 @@
-generated: '2026-08-09'
+generated: '2026-08-31'
 method: generated
 source: openapi/tvarka-atk-api-openapi-original.json
 note: >-
-  Packaged agent skills for the Tvarka ATK API's marquee flows. Every operationId referenced below
-  was verified against the provider's published OpenAPI 3.1 contract. Tvarka publishes no AGENTS.md
-  or skill files of its own (searched 2026-08-09).
+  Packaged agent skills for the Tvarka API estate's marquee flows. Every operationId referenced below
+  was verified against the provider's published OpenAPI 3.1 contracts. Tvarka publishes no AGENTS.md
+  or skill files of its own (re-searched 2026-08-31), but it DOES publish an llms.txt per API and a
+  live MCP server for the Sign API - see llms/ and mcp/.
 skills:
   - file: tvarka-atk-api-authenticate-with-eid.md
     name: Authenticate a person with a Lithuanian eID card
@@ -14,10 +15,6 @@ skills:
     name: Sign a document with a qualified electronic signature
     api: openapi/tvarka-atk-api-openapi-original.json
     operations: [createSignRequest, submitSignCertificate, completeSign, getSignRequest, downloadSignedDocument, cancelSignRequest]
-  - file: tvarka-atk-api-remote-sign-smart-id-mobile-id.md
-    name: Authenticate or sign remotely with Smart-ID or Mobile-ID
-    api: openapi/tvarka-atk-api-openapi-original.json
-    operations: [createAuthRequest, createSignRequest, getAuthRequest, getSignRequest, downloadSignedDocument, cancelAuthRequest, cancelSignRequest]
   - file: tvarka-atk-api-validate-timestamp-archive.md
     name: Validate, timestamp and archive a signed document
     api: openapi/tvarka-atk-api-openapi-original.json
@@ -30,3 +27,16 @@ skills:
     name: Erase request data on demand (GDPR)
     api: openapi/tvarka-atk-api-openapi-original.json
     operations: [deleteAuthRequest, deleteSignRequest, bulkErasure]
+  - file: tvarka-sign-api-request-signatures.md
+    name: Collect qualified signatures from several people on one document
+    api: openapi/tvarka-sign-api-openapi.yml
+    operations: [createSigning, getSigning, listSignings, addSigner, remindSigner, cancelSigning, downloadSignedDocument, eraseSigning, simulateSigning]
+withdrawn:
+  - file: tvarka-atk-api-remote-sign-smart-id-mobile-id.md
+    name: Authenticate or sign remotely with Smart-ID or Mobile-ID
+    removed: '2026-08-31'
+    reason: >-
+      ATK contract 1.4.0 removed smart_id and mobile_id from the AuthMethod and SignMethod enums, so
+      the skill taught a request the API now rejects. The remote-method flow it described did not
+      disappear - it moved to the Tvarka Sign API, and is re-grounded in
+      tvarka-sign-api-request-signatures.md against operationIds verified in that contract.

@@ -1,9 +1,9 @@
-generated: '2026-08-09'
+generated: '2026-08-31'
 method: searched
 source: https://atk.tvarka.pro/docs/lifecycle/
 url: https://atk.tvarka.pro/docs/lifecycle/
 scheme: semver-on-contract
-current_version: 1.3.0
+current_version: 1.4.0
 current_resource_family: /v1
 dated: false
 note: >-
@@ -12,6 +12,27 @@ note: >-
   date. The APIs.json the provider serves at https://atk.tvarka.pro/apis.json points its ChangeLog
   property at this same page.
 entries:
+  - version: 1.4.0
+    date: null
+    breaking: true
+    additions: []
+    removals:
+      - The 1.3.0 Smart-ID authentication and PAdES signing method.
+      - The 1.3.0 Mobile-ID authentication and PAdES signing method.
+    highlights: >-
+      "Card-only again: the 1.3.0 Smart-ID/Mobile-ID methods were withdrawn before any provider was
+      entitled to them. Remote-method ceremonies live in the Tvarka Sign API." Quoted verbatim from
+      the provider's release-history table. The AuthMethod and SignMethod enums drop from
+      [physical, nfc, smart_id, mobile_id] to [physical, nfc]; personalCode and phoneNumber leave
+      the request schemas; the operation set is unchanged at 22.
+    verified_against: >-
+      Live contract fetched 2026-08-31 from https://atk.tvarka.pro/openapi.json (info.version
+      1.4.0), diffed against the 1.3.0 copy harvested 2026-08-09.
+    marked_breaking_because: >-
+      An enum value was REMOVED. The provider does not label it breaking, on the stated grounds that
+      no provider was ever entitled to the withdrawn methods, so no live integration could depend on
+      them. Recorded as breaking here because the contract narrowed; recorded with the provider's
+      reason so a reader can judge it.
   - version: 1.3.0
     date: null
     breaking: false

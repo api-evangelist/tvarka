@@ -1,0 +1,114 @@
+generated: '2026-08-31'
+method: derived
+source: mcp/tvarka-sign-api-mcp.yml + openapi/tvarka-sign-api-openapi.yml
+note: >-
+  Binds every tool of the LIVE Tvarka Sign MCP server (probed anonymously 2026-08-31) to the backing
+  operationId in the provider's own OpenAPI 3.1 contract, so a tool inherits a real inputSchema from
+  the operation rather than a guessed one. Both surfaces were fetched from the provider on the same
+  day, so this is a same-version comparison - MCP server 1.2.1 against contract 1.2.1.
+
+surfaces:
+  openapi:
+    file: openapi/tvarka-sign-api-openapi.yml
+    source: https://sign-api.tvarka.pro/openapi.yaml
+    version: 1.2.1
+    operations: 21
+    gated: false
+  mcp:
+    url: https://sign-api.tvarka.pro/mcp
+    registry_name: pro.tvarka/sign
+    version: 1.2.1
+    tools: 6
+    gated: false
+    note: tools/list answers anonymously; only tool INVOCATION requires a tsk_ bearer key.
+  graphql: null
+
+crosswalk:
+  - tool: list_documents
+    category: vault
+    rest: []
+    binding: mcp-only
+    confidence: high
+    note: >-
+      The workspace document VAULT has no public REST operation. POST /v1/files stores a document
+      for reuse and GET /v1/files/{fileToken} inspects one, but neither lists the vault, and the
+      vault documentId the MCP server returns is not the REST fileToken. Recorded as an MCP-only
+      surface rather than force-mapped onto uploadFile.
+  - tool: request_signatures
+    category: signing
+    rest: [createSigning]
+    binding: rest
+    confidence: high
+    note: >-
+      POST /v1/signings. The tool is the narrower of the two: it takes a vault documentId plus
+      signers/title/delivery/expiresInDays, while createSigning additionally accepts inline
+      document/container uploads, signingOrder, softDeadlineInDays, externalId, webhookUrl and
+      flatten. An agent that needs sequential ordering or webhooks must use REST.
+  - tool: get_signing
+    category: signing
+    rest: [getSigning]
+    binding: rest
+    confidence: high
+  - tool: list_signings
+    category: signing
+    rest: [listSignings]
+    binding: rest
+    confidence: high
+    note: Both take status + limit.
+  - tool: remind_signer
+    category: signing
+    rest: [remindSigner]
+    binding: rest
+    confidence: medium
+    note: >-
+      The REST path addresses the signer by signerId
+      (POST /v1/signings/{signingId}/signers/{signerId}/remind); the tool addresses them by
+      signerEmail and resolves it server-side. Same action, different key.
+  - tool: cancel_signing
+    category: signing
+    rest: [cancelSigning]
+    binding: rest
+    confidence: high
+
+mcp_only:
+  - tool: list_documents
+    reason: >-
+      Workspace vault listing. No public REST operation enumerates the vault; the REST file surface
+      (uploadFile/getFile/deleteFile) is a per-token store, not the vault.
+
+rest_only:
+  - capability: signing lifecycle
+    operations: [updateSigning, eraseSigning, addSigner, updateSignerMethods, removeSigner]
+    note: Deadline changes, erasure and signer-roster edits have no tool.
+  - capability: batches
+    operations: [createBatch, getBatch]
+    note: One signing per document for one set of parties.
+  - capability: long-term signatures
+    operations: [archiveSigning]
+    note: PAdES-B-T to B-LT / XAdES-T to XAdES-LT upgrade.
+  - capability: files
+    operations: [uploadFile, getFile, deleteFile]
+  - capability: comments
+    operations: [listComments, addComment]
+  - capability: erasure
+    operations: [eraseSignings]
+  - capability: download
+    operations: [downloadSignedDocument]
+    note: >-
+      The MCP surface cannot retrieve the signed artifact at all - a deliberate boundary, consistent
+      with the provider's stated design that documents never travel through an agent's context.
+  - capability: sandbox simulation
+    operations: [simulateSigning]
+    note: Sandbox keys only.
+
+coverage:
+  tools_named: 6
+  tools_bound_to_rest: 5
+  mcp_only: 1
+  rest_operations_total: 21
+  rest_operations_with_a_tool: 5
+  rest_only_operations: 16
+  observation: >-
+    The MCP server is a deliberately narrow read-plus-one-write projection of the REST contract:
+    raise a ceremony, watch it, nudge it, call it off. Everything that edits the roster, moves a
+    deadline, uploads bytes, upgrades to long-term or downloads the finished artifact stays on REST.

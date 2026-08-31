@@ -1,0 +1,60 @@
+generated: '2026-08-31'
+method: searched
+source: https://sign-api.tvarka.pro/docs
+sources:
+  - https://sign-api.tvarka.pro/docs
+  - https://sign-api.tvarka.pro/llms.txt
+  - openapi/tvarka-sign-api-openapi.yml
+summary:
+  types: [http]
+  http_schemes: [bearer]
+  api_key_in: [header]
+  oauth2_flows: []
+  oauth2: false
+  openid_connect: false
+  model: >-
+    One long-lived workspace bearer key, environment-separated by prefix. Simpler than the ATK API's
+    layered model because no browser or device ever holds a credential - the human signs on Tvarka's
+    own hosted page or in the Tvarka Sign mobile app, not in the integrator's client.
+schemes:
+  - name: bearerAuth
+    type: http
+    scheme: bearer
+    header: 'Authorization: Bearer <key>'
+    sources: [openapi/tvarka-sign-api-openapi.yml]
+    description: >-
+      Keys are provisioned by Tvarka during onboarding and shown once. A tsk_live_ key acts on
+      production; a tsk_test_ key is the sandbox.
+key_prefixes:
+  production: tsk_live_
+  sandbox: tsk_test_
+identity_model:
+  binding: >-
+    The key acts as a NAMED WORKSPACE USER, not as an anonymous service principal. If that person's
+    role is revoked, or the workspace is suspended, the key stops working.
+  tenancy: >-
+    A tenant is a Tvarka entity with a Sign workspace; ceremonies are raised in that entity's name,
+    so the counterparty sees who is actually asking.
+  quoted_from: openapi/tvarka-sign-api-openapi.yml components.securitySchemes.bearerAuth.description
+mcp:
+  endpoint: https://sign-api.tvarka.pro/mcp
+  discovery_auth: none
+  invocation_auth: same bearer key
+  note: >-
+    tools/list and initialize answer anonymously (probed 2026-08-31, HTTP 200). Tool calls carry the
+    same Authorization: Bearer <key>. There is no OAuth: /.well-known/oauth-authorization-server and
+    /.well-known/oauth-protected-resource both 404 on sign-api.tvarka.pro.
+provisioning:
+  request: info@tvarka.pro
+  note: A sandbox tenant costs nothing and its key works before any funding.
+failures:
+  - status: 401
+    applies_to: every operation
+  - status: 402
+    applies_to: [createSigning, createBatch, addSigner]
+    note: >-
+      Payment-required refusal. The problem body may carry recoveryUrl - a browser page for the
+      tenant's payment setup, explicitly NOT an API endpoint.
+  - status: 403
+    applies_to: [createSigning, simulateSigning]
+    note: simulateSigning is refused outright for a tsk_live_ key.

@@ -1,0 +1,685 @@
+generated: '2026-08-31'
+method: generated
+source: openapi/tvarka-atk-api-auth-api-openapi.yml, openapi/tvarka-atk-api-erasure-api-openapi.yml, openapi/tvarka-atk-api-ltv-api-openapi.yml,
+  openapi/tvarka-atk-api-pairing-api-openapi.yml, openapi/tvarka-atk-api-sign-api-openapi.yml, openapi/tvarka-atk-api-validation-api-openapi.yml,
+  openapi/tvarka-atk-api-well-known-api-openapi.yml, openapi/tvarka-sign-api-openapi.yml
+description: Recommended x-agentic-access execution contracts, classified heuristically from the OpenAPI. A governance
+  starting point for exposing this API to AI agents — review and bind audience per deployment. See research/curity/agentic-governance/.
+summary:
+  operations: 44
+  by_action_class:
+    acting: 31
+    connected: 13
+  by_consequence:
+    write: 26
+    read: 13
+    physical: 5
+  human_in_the_loop_required: 15
+operations:
+- path: /auth/requests
+  method: post
+  operationId: createAuthRequest
+  x-agentic-access:
+    action-class: acting
+    consequence: write
+    subject: required
+    audience: null
+    token:
+      max-ttl: 900
+    escalation:
+      human-in-the-loop: conditional
+      triggers:
+      - abnormal
+      - high-value
+    audit: required
+    human-in-the-loop: required
+    x-curation-reason: Opens a national eID identity verification ceremony.
+- path: /auth/{requestId}/certificate
+  method: post
+  operationId: submitAuthCertificate
+  x-agentic-access:
+    action-class: acting
+    consequence: write
+    subject: required
+    audience: null
+    token:
+      max-ttl: 900
+    escalation:
+      human-in-the-loop: conditional
+      triggers:
+      - abnormal
+      - high-value
+    audit: required
+- path: /auth/{requestId}/complete
+  method: post
+  operationId: completeAuth
+  x-agentic-access:
+    action-class: acting
+    consequence: write
+    subject: required
+    audience: null
+    token:
+      max-ttl: 900
+    escalation:
+      human-in-the-loop: conditional
+      triggers:
+      - abnormal
+      - high-value
+    audit: required
+    human-in-the-loop: required
+    x-curation-reason: Produces a verified national eID identity.
+- path: /auth/{requestId}
+  method: get
+  operationId: getAuthRequest
+  x-agentic-access:
+    action-class: connected
+    consequence: read
+    subject: optional
+    token:
+      max-ttl: 3600
+    audit: none
+- path: /auth/{requestId}/cancel
+  method: post
+  operationId: cancelAuthRequest
+  x-agentic-access:
+    action-class: acting
+    consequence: write
+    subject: required
+    audience: null
+    token:
+      max-ttl: 900
+    escalation:
+      human-in-the-loop: conditional
+      triggers:
+      - abnormal
+      - high-value
+    audit: required
+- path: /auth/{requestId}/delete
+  method: post
+  operationId: deleteAuthRequest
+  x-agentic-access:
+    action-class: acting
+    consequence: write
+    subject: required
+    audience: null
+    token:
+      max-ttl: 900
+    escalation:
+      human-in-the-loop: conditional
+      triggers:
+      - abnormal
+      - high-value
+    audit: required
+    human-in-the-loop: required
+    x-curation-reason: Irreversible purge of a request and its personal data.
+- path: /erasure
+  method: post
+  operationId: bulkErasure
+  x-agentic-access:
+    action-class: acting
+    consequence: write
+    subject: required
+    audience: null
+    token:
+      max-ttl: 900
+    escalation:
+      human-in-the-loop: conditional
+      triggers:
+      - abnormal
+      - high-value
+    audit: required
+    human-in-the-loop: required
+    x-curation-reason: Irreversible tenant-wide purge of terminal request data.
+- path: /sign/{requestId}/delete
+  method: post
+  operationId: deleteSignRequest
+  x-agentic-access:
+    action-class: acting
+    consequence: write
+    subject: required
+    audience: null
+    token:
+      max-ttl: 900
+    escalation:
+      human-in-the-loop: conditional
+      triggers:
+      - abnormal
+      - high-value
+    audit: required
+    human-in-the-loop: required
+    x-curation-reason: Irreversible purge of a request and its personal data.
+- path: /timestamp
+  method: post
+  operationId: timestampDocument
+  x-agentic-access:
+    action-class: acting
+    consequence: write
+    subject: required
+    audience: null
+    token:
+      max-ttl: 900
+    escalation:
+      human-in-the-loop: conditional
+      triggers:
+      - abnormal
+      - high-value
+    audit: required
+    human-in-the-loop: required
+    x-curation-reason: Billed trust-service call.
+- path: /archive
+  method: post
+  operationId: archiveDocument
+  x-agentic-access:
+    action-class: acting
+    consequence: write
+    subject: required
+    audience: null
+    token:
+      max-ttl: 900
+    escalation:
+      human-in-the-loop: conditional
+      triggers:
+      - abnormal
+      - high-value
+    audit: required
+    human-in-the-loop: required
+    x-curation-reason: Billed trust-service call.
+- path: /services/{requestId}/document
+  method: get
+  operationId: downloadServiceDocument
+  x-agentic-access:
+    action-class: connected
+    consequence: read
+    subject: optional
+    token:
+      max-ttl: 3600
+    audit: none
+- path: /auth/{requestId}/pairing
+  method: get
+  operationId: getAuthPairing
+  x-agentic-access:
+    action-class: connected
+    consequence: read
+    subject: optional
+    token:
+      max-ttl: 3600
+    audit: none
+- path: /pairing/claim
+  method: post
+  operationId: claimPairing
+  x-agentic-access:
+    action-class: acting
+    consequence: write
+    subject: required
+    audience: null
+    token:
+      max-ttl: 900
+    escalation:
+      human-in-the-loop: conditional
+      triggers:
+      - abnormal
+      - high-value
+    audit: required
+- path: /sign/requests
+  method: post
+  operationId: createSignRequest
+  x-agentic-access:
+    action-class: acting
+    consequence: physical
+    subject: required
+    audience: null
+    token:
+      max-ttl: 900
+    escalation:
+      human-in-the-loop: conditional
+      triggers:
+      - abnormal
+      - high-value
+    audit: required
+    human-in-the-loop: required
+    x-curation-reason: Opens a QUALIFIED electronic signature ceremony with legal effect under eIDAS.
+- path: /sign/{requestId}/certificate
+  method: post
+  operationId: submitSignCertificate
+  x-agentic-access:
+    action-class: acting
+    consequence: write
+    subject: required
+    audience: null
+    token:
+      max-ttl: 900
+    escalation:
+      human-in-the-loop: conditional
+      triggers:
+      - abnormal
+      - high-value
+    audit: required
+- path: /sign/{requestId}/complete
+  method: post
+  operationId: completeSign
+  x-agentic-access:
+    action-class: acting
+    consequence: physical
+    subject: required
+    audience: null
+    token:
+      max-ttl: 900
+    escalation:
+      human-in-the-loop: conditional
+      triggers:
+      - abnormal
+      - high-value
+    audit: required
+    human-in-the-loop: required
+    x-curation-reason: Assembles the qualified signature. Irreversible once made.
+- path: /sign/{requestId}
+  method: get
+  operationId: getSignRequest
+  x-agentic-access:
+    action-class: connected
+    consequence: read
+    subject: optional
+    token:
+      max-ttl: 3600
+    audit: none
+- path: /sign/{requestId}/document
+  method: get
+  operationId: downloadSignedDocument
+  x-agentic-access:
+    action-class: connected
+    consequence: read
+    subject: optional
+    token:
+      max-ttl: 3600
+    audit: none
+- path: /sign/{requestId}/cancel
+  method: post
+  operationId: cancelSignRequest
+  x-agentic-access:
+    action-class: acting
+    consequence: write
+    subject: required
+    audience: null
+    token:
+      max-ttl: 900
+    escalation:
+      human-in-the-loop: conditional
+      triggers:
+      - abnormal
+      - high-value
+    audit: required
+- path: /sign/{requestId}/pairing
+  method: get
+  operationId: getSignPairing
+  x-agentic-access:
+    action-class: connected
+    consequence: read
+    subject: optional
+    token:
+      max-ttl: 3600
+    audit: none
+- path: /pairing/claim
+  method: post
+  operationId: claimPairing
+  x-agentic-access:
+    action-class: acting
+    consequence: write
+    subject: required
+    audience: null
+    token:
+      max-ttl: 900
+    escalation:
+      human-in-the-loop: conditional
+      triggers:
+      - abnormal
+      - high-value
+    audit: required
+- path: /validation
+  method: post
+  operationId: validateDocument
+  x-agentic-access:
+    action-class: acting
+    consequence: write
+    subject: required
+    audience: null
+    token:
+      max-ttl: 900
+    escalation:
+      human-in-the-loop: conditional
+      triggers:
+      - abnormal
+      - high-value
+    audit: required
+    human-in-the-loop: required
+    x-curation-reason: Billed trust-service call.
+- path: /.well-known/atk-jwks.json
+  method: get
+  operationId: getJwks
+  x-agentic-access:
+    action-class: connected
+    consequence: read
+    subject: optional
+    token:
+      max-ttl: 3600
+    audit: none
+- path: /v1/signings
+  method: get
+  operationId: listSignings
+  x-agentic-access:
+    action-class: connected
+    consequence: read
+    subject: optional
+    token:
+      max-ttl: 3600
+    audit: none
+- path: /v1/signings
+  method: post
+  operationId: createSigning
+  x-agentic-access:
+    action-class: acting
+    consequence: physical
+    subject: required
+    audience: null
+    token:
+      max-ttl: 900
+    escalation:
+      human-in-the-loop: conditional
+      triggers:
+      - abnormal
+      - high-value
+    audit: required
+    human-in-the-loop: required
+    x-curation-reason: Opens a real, billed qualified signing ceremony and invites real people.
+- path: /v1/signings/{signingId}
+  method: get
+  operationId: getSigning
+  x-agentic-access:
+    action-class: connected
+    consequence: read
+    subject: optional
+    token:
+      max-ttl: 3600
+    audit: none
+- path: /v1/signings/{signingId}
+  method: patch
+  operationId: updateSigning
+  x-agentic-access:
+    action-class: acting
+    consequence: write
+    subject: required
+    audience: null
+    token:
+      max-ttl: 900
+    escalation:
+      human-in-the-loop: conditional
+      triggers:
+      - abnormal
+      - high-value
+    audit: required
+- path: /v1/signings/{signingId}
+  method: delete
+  operationId: eraseSigning
+  x-agentic-access:
+    action-class: acting
+    consequence: write
+    subject: required
+    audience: null
+    token:
+      max-ttl: 900
+    escalation:
+      human-in-the-loop: conditional
+      triggers:
+      - abnormal
+      - high-value
+    audit: required
+    human-in-the-loop: required
+    x-curation-reason: Cancels then irreversibly purges a signing.
+- path: /v1/batches
+  method: post
+  operationId: createBatch
+  x-agentic-access:
+    action-class: acting
+    consequence: physical
+    subject: required
+    audience: null
+    token:
+      max-ttl: 900
+    escalation:
+      human-in-the-loop: conditional
+      triggers:
+      - abnormal
+      - high-value
+    audit: required
+    human-in-the-loop: required
+    x-curation-reason: Opens one billed signing per document for a set of parties.
+- path: /v1/batches/{batchId}
+  method: get
+  operationId: getBatch
+  x-agentic-access:
+    action-class: connected
+    consequence: read
+    subject: optional
+    token:
+      max-ttl: 3600
+    audit: none
+- path: /v1/signings/{signingId}/archive
+  method: post
+  operationId: archiveSigning
+  x-agentic-access:
+    action-class: acting
+    consequence: write
+    subject: required
+    audience: null
+    token:
+      max-ttl: 900
+    escalation:
+      human-in-the-loop: conditional
+      triggers:
+      - abnormal
+      - high-value
+    audit: required
+- path: /v1/files
+  method: post
+  operationId: uploadFile
+  x-agentic-access:
+    action-class: acting
+    consequence: write
+    subject: required
+    audience: null
+    token:
+      max-ttl: 900
+    escalation:
+      human-in-the-loop: conditional
+      triggers:
+      - abnormal
+      - high-value
+    audit: required
+- path: /v1/files/{fileToken}
+  method: get
+  operationId: getFile
+  x-agentic-access:
+    action-class: connected
+    consequence: read
+    subject: optional
+    token:
+      max-ttl: 3600
+    audit: none
+- path: /v1/files/{fileToken}
+  method: delete
+  operationId: deleteFile
+  x-agentic-access:
+    action-class: acting
+    consequence: write
+    subject: required
+    audience: null
+    token:
+      max-ttl: 900
+    escalation:
+      human-in-the-loop: conditional
+      triggers:
+      - abnormal
+      - high-value
+    audit: required
+- path: /v1/signings/{signingId}/comments
+  method: get
+  operationId: listComments
+  x-agentic-access:
+    action-class: connected
+    consequence: read
+    subject: optional
+    token:
+      max-ttl: 3600
+    audit: none
+- path: /v1/signings/{signingId}/comments
+  method: post
+  operationId: addComment
+  x-agentic-access:
+    action-class: acting
+    consequence: write
+    subject: required
+    audience: null
+    token:
+      max-ttl: 900
+    escalation:
+      human-in-the-loop: conditional
+      triggers:
+      - abnormal
+      - high-value
+    audit: required
+- path: /v1/erasure
+  method: post
+  operationId: eraseSignings
+  x-agentic-access:
+    action-class: acting
+    consequence: write
+    subject: required
+    audience: null
+    token:
+      max-ttl: 900
+    escalation:
+      human-in-the-loop: conditional
+      triggers:
+      - abnormal
+      - high-value
+    audit: required
+    human-in-the-loop: required
+    x-curation-reason: Irreversible bulk purge of terminal signing records.
+- path: /v1/signings/{signingId}/cancel
+  method: post
+  operationId: cancelSigning
+  x-agentic-access:
+    action-class: acting
+    consequence: write
+    subject: required
+    audience: null
+    token:
+      max-ttl: 900
+    escalation:
+      human-in-the-loop: conditional
+      triggers:
+      - abnormal
+      - high-value
+    audit: required
+- path: /v1/signings/{signingId}/document
+  method: get
+  operationId: downloadSignedDocument
+  x-agentic-access:
+    action-class: connected
+    consequence: read
+    subject: optional
+    token:
+      max-ttl: 3600
+    audit: none
+- path: /v1/signings/{signingId}/signers
+  method: post
+  operationId: addSigner
+  x-agentic-access:
+    action-class: acting
+    consequence: physical
+    subject: required
+    audience: null
+    token:
+      max-ttl: 900
+    escalation:
+      human-in-the-loop: conditional
+      triggers:
+      - abnormal
+      - high-value
+    audit: required
+    human-in-the-loop: required
+    x-curation-reason: Adds a billable signer to a live ceremony and sends them an invitation.
+- path: /v1/signings/{signingId}/signers/{signerId}
+  method: patch
+  operationId: updateSignerMethods
+  x-agentic-access:
+    action-class: acting
+    consequence: write
+    subject: required
+    audience: null
+    token:
+      max-ttl: 900
+    escalation:
+      human-in-the-loop: conditional
+      triggers:
+      - abnormal
+      - high-value
+    audit: required
+- path: /v1/signings/{signingId}/signers/{signerId}
+  method: delete
+  operationId: removeSigner
+  x-agentic-access:
+    action-class: acting
+    consequence: write
+    subject: required
+    audience: null
+    token:
+      max-ttl: 900
+    escalation:
+      human-in-the-loop: conditional
+      triggers:
+      - abnormal
+      - high-value
+    audit: required
+- path: /v1/signings/{signingId}/signers/{signerId}/remind
+  method: post
+  operationId: remindSigner
+  x-agentic-access:
+    action-class: acting
+    consequence: write
+    subject: required
+    audience: null
+    token:
+      max-ttl: 900
+    escalation:
+      human-in-the-loop: conditional
+      triggers:
+      - abnormal
+      - high-value
+    audit: required
+- path: /v1/signings/{signingId}/simulate
+  method: post
+  operationId: simulateSigning
+  x-agentic-access:
+    action-class: acting
+    consequence: write
+    subject: required
+    audience: null
+    token:
+      max-ttl: 900
+    escalation:
+      human-in-the-loop: conditional
+      triggers:
+      - abnormal
+      - high-value
+    audit: required
+curated: '2026-08-31'
+curation_note: 'The mechanical classifier reads HTTP method and keyword only, and returned human_in_the_loop_required:
+  0 for an estate whose writes are legally significant acts. Curated 2026-08-31 against the provider''s own docs
+  and contracts: every operation that opens or completes a national eID identity verification or a qualified electronic
+  signature, every billed trust-service call, and every irreversible erasure now carries human-in-the-loop: required,
+  with the reason recorded per operation in x-curation-reason. Signing and signature-requesting operations are additionally
+  raised to consequence: physical because they bind a real person to a legally effective instrument and bill for
+  it. Nothing else in the generated classification was altered.'
+related:
+  reversibility: conventions/tvarka-atk-api-conventions.yml + conventions/tvarka-sign-api-conventions.yml
+  mcp: mcp/tvarka-sign-api-mcp.yml

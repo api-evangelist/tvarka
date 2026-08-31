@@ -1,10 +1,10 @@
-generated: '2026-08-09'
+generated: '2026-08-31'
 method: searched
 source: https://atk.tvarka.pro/docs/lifecycle/
 versioning:
   scheme: uri-path
   current: v1
-  contract_version: 1.3.0
+  contract_version: 1.4.0
   docs: https://atk.tvarka.pro/docs/lifecycle/
   policy: >-
     Additive fields, methods and operations may be introduced within /v1. Existing clients must
@@ -16,7 +16,7 @@ deprecation:
   deprecation_header: false
   policy: >-
     Any future retirement notice will name the affected operation and final availability date. No
-    /v1 retirement is scheduled as of 2026-08-09.
+    /v1 retirement is scheduled as of 2026-08-31.
   note: >-
     The policy is published in prose; RFC 8594 Sunset / Deprecation response headers are not
     documented in the OpenAPI or the lifecycle page.
@@ -56,6 +56,10 @@ operational_defaults:
   delivery: polling or at-least-once HMAC-signed webhook; deduplicate by idempotency key
 deprecated_operations: []
 release_history:
+  - version: 1.4.0
+    capability: >-
+      Card-only again - the 1.3.0 Smart-ID/Mobile-ID methods were withdrawn before any provider was
+      entitled to them. Remote-method ceremonies live in the Tvarka Sign API.
   - version: 1.3.0
     capability: Optional Smart-ID and Mobile-ID authentication and PAdES signing methods.
   - version: 1.2.0
@@ -67,3 +71,26 @@ release_history:
 notes: >-
   The release history is published without dates; see changelog/tvarka-atk-api-changelog.yml for the
   same window in changelog shape.
+
+x-recheck:
+  date: '2026-08-31'
+  findings:
+    - >-
+      Contract moved 1.3.0 -> 1.4.0 and NARROWED: the Smart-ID and Mobile-ID method enum values were
+      removed. The provider handled it as a withdrawal rather than a deprecation - there was no
+      Sunset header, no deprecation notice and no transition window, on the stated grounds that no
+      provider had been entitled to the methods. This is the first observed exercise of the
+      published compatibility policy, and it was a removal, so the policy's claim that "a breaking
+      request or response change requires a new major resource family" was not applied to it.
+    - >-
+      Machine-readable status now confirmed: https://atk.tvarka.pro/status.json (200, JSON snapshot
+      with per-component state and a 90-day incident window), https://atk.tvarka.pro/status/feed.xml
+      (200, Atom) and https://atk.tvarka.pro/health/ (200, "OK") - an independent host reachability
+      probe the status page names for automated monitoring.
+    - >-
+      RFC 8594 Sunset / Deprecation response headers are still not documented and still not present.
+  probes:
+    - {url: 'https://atk.tvarka.pro/docs/lifecycle/', status: 200}
+    - {url: 'https://atk.tvarka.pro/status.json', status: 200}
+    - {url: 'https://atk.tvarka.pro/status/feed.xml', status: 200}
+    - {url: 'https://atk.tvarka.pro/health/', status: 200}

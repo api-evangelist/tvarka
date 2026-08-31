@@ -1,4 +1,4 @@
-generated: '2026-08-09'
+generated: '2026-08-31'
 method: searched
 source: https://atk.tvarka.pro/docs/test-data/
 docs:
@@ -51,7 +51,12 @@ test_material:
       paths without card hardware. The private test key is NOT a global public credential. A real
       Lithuanian eID card can also be used against an appropriately provisioned sandbox.
   - kind: remote-identity
-    name: Smart-ID / Mobile-ID test identities
+    name: Smart-ID / Mobile-ID test identities (WITHDRAWN with contract 1.4.0)
+    withdrawn: '2026-08-31'
+    withdrawn_note: >-
+      No longer applicable to this API - 1.4.0 removed the remote methods. Remote-method sandboxing
+      moved to the Tvarka Sign API, where a tsk_test_ key plus POST /v1/signings/{id}/simulate covers
+      the same ground; see sandbox/tvarka-sign-api-sandbox.yml.
     availability: provisioned
     description: >-
       Remote-method test identities depend on the environment enabled for the contract and are
@@ -68,3 +73,19 @@ published_test_values:
 time_simulation:
   supported: false
   note: No test clocks or time-simulation tooling are published.
+
+x-recheck:
+  date: '2026-08-31'
+  probes:
+    - {url: 'https://atk.tvarka.pro/docs/test-data/', status: 200}
+    - {url: 'https://atk.tvarka.pro/docs/access/', status: 200}
+    - {url: 'https://atk.tvarka.pro/docs/try/', status: 200}
+    - {url: 'https://atk.tvarka.pro/test-data/atk-test.pdf.sha256', status: 200}
+  findings:
+    - >-
+      The published test PDF and its SHA-256 digest are unchanged:
+      b0966e87751a6443f9e6894b3ccb91afdf784343ca0845fec20194e4d44b638f.
+    - >-
+      Try-it console still Swagger UI 5.32.11, now labelled "OpenAPI 1.4.0", same-origin and
+      restricted to this ATK origin under /v1/.
+    - The environment=sandbox credential model is unchanged.

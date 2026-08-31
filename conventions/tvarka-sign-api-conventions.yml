@@ -1,0 +1,172 @@
+generated: '2026-08-31'
+method: searched
+source: https://sign-api.tvarka.pro/docs
+sources:
+  - https://sign-api.tvarka.pro/docs
+  - https://sign-api.tvarka.pro/llms.txt
+  - openapi/tvarka-sign-api-openapi.yml
+summary: >-
+  An orchestration API around a human act. Every write moves a ceremony through a state machine, and
+  the state machine - not the HTTP verb - decides what is allowed, which is why 409 is the dominant
+  error. Cursor pagination, RFC 9457 problems that collect every field fault into one response, and
+  HMAC-signed webhooks that are explicitly a convenience over polling.
+
+authentication:
+  style: single-key
+  scheme: http-bearer
+  header: 'Authorization: Bearer <key>'
+  environments: {production: tsk_live_, sandbox: tsk_test_}
+  detail: authentication/tvarka-sign-api-authentication.yml
+
+pagination:
+  style: cursor
+  operations: [listSignings]
+  request_params: [status, limit, startingAfter]
+  response_fields: [data, hasMore, nextCursor]
+  note: >-
+    startingAfter takes the previous page's nextCursor. listComments and getBatch return their full
+    set unpaginated.
+
+idempotency:
+  request_level: false
+  note: >-
+    The Sign API declares NO request idempotency header. This is a real difference from the sibling
+    ATK API, which requires X-Atk-Idempotency-Key on its stateless trust services. Here safety comes
+    from the state machine instead: a second cancel, a second archive or a second erase of the same
+    signing is refused or returns unchanged rather than doing the work twice.
+  naturally_idempotent_operations:
+    - {operationId: eraseSigning, note: 'Declared "Idempotent." in the contract.'}
+    - {operationId: archiveSigning, note: 'Already-archived output comes back unchanged with upgraded false - calling it twice costs a parse, not a second signature.'}
+    - {operationId: cancelSigning, note: 'A cancelled signing is terminal; re-cancelling conflicts (409).'}
+  webhook_idempotency:
+    header: X-Tvarka-Idempotency-Key
+    guidance: Deduplicate deliveries by this key; delivery is at-least-once.
+  agent_guidance: >-
+    An agent retrying a failed createSigning has NO idempotency key to protect it and can raise a
+    duplicate ceremony that bills a second time. Use the caller-supplied externalId and a
+    listSignings check before retrying.
+
+versioning:
+  scheme: uri-path
+  current: v1
+  contract_version: 1.2.1
+  note: >-
+    The base URL is https://sign-api.tvarka.pro and every operation path carries /v1/. No version
+    header, no date-pinning.
+
+error_envelope:
+  format: rfc9457
+  media_type: application/problem+json
+  collecting_validation: >-
+    Request-body validation collects every fault into one validation-failed response with an
+    errors[] array of JSON Pointer + detail, rather than failing fast.
+  detail: errors/tvarka-sign-api-problem-types.yml
+
+rate_limit_signal:
+  status: 429
+  headers_published: false
+  documented_limits:
+    - {scope: remind_signer / remindSigner, limit: 1 reminder per signer per hour, source: 'https://sign-api.tvarka.pro/docs'}
+  note: >-
+    429 is declared on every operation but the contract publishes no RateLimit-* or Retry-After
+    headers and no numeric quota. See rate-limits/tvarka-sign-api-rate-limits.yml.
+
+tracing:
+  request_id_header: null
+  correlation: >-
+    externalId is the caller's own correlation key, echoed on the signing and on every webhook
+    payload. There is no server-issued request-id header.
+
+webhooks:
+  detail: asyncapi/tvarka-sign-api-webhooks.yml
+  signature_header: X-Tvarka-Signature
+  event_header: X-Tvarka-Event
+
+agent_surface:
+  mcp: mcp/tvarka-sign-api-mcp.yml
+  crosswalk: mcp/tvarka-sign-api-tool-crosswalk.yml
+  design_note: >-
+    Tools address documents already in the workspace vault, so no document bytes travel through an
+    agent's context.
+
+dry_run_mode:
+  supported: true
+  mechanism: >-
+    A tsk_test_ sandbox key opens real ceremonies against the real state machine, and
+    simulateSigning drives one to completed / declined / expired on demand. It is a full rehearsal
+    environment rather than a per-request dry-run flag: there is no `dryRun: true` parameter on any
+    production operation.
+  scope: environment-level
+
+reversibility:
+  grade: verified
+  summary: >-
+    Every write on this API has a named reversal operation, and the provider states plainly where
+    reversal STOPS: a qualified signature, once made, is permanent. That boundary is the important
+    fact for an agent - the ceremony is retractable, the signature is not.
+  surfaces:
+    - write: createSigning
+      creates: a signing plus one ceremony invitation per signer (billed per signature on completion)
+      reversal: cancelSigning
+      reversal_operation_id: cancelSigning
+      window: >-
+        Any time before a signer uses their link. Cancel retracts every invitation that has NOT been
+        used - the ceremony link dies immediately and the identity data captured about those signers
+        is erased.
+      limit: >-
+        Signatures already collected are untouched. The provider states it explicitly: "A qualified
+        signature exists once it is made, and this endpoint does not pretend otherwise - the signed
+        document remains downloadable."
+      docs: https://sign-api.tvarka.pro/docs
+      source: openapi/tvarka-sign-api-openapi.yml#cancelSigning
+    - write: createSigning
+      reversal: eraseSigning
+      reversal_operation_id: eraseSigning
+      window: >-
+        Any time. Erase cancels a live signing FIRST, then purges captured identity and
+        caller-supplied personal data; for a document uploaded through this API the bytes and vault
+        record go too. A pre-existing vault document opened through MCP is preserved while the
+        dedicated ceremony is removed. A de-identified audit row remains.
+      docs: https://sign-api.tvarka.pro/docs
+      source: openapi/tvarka-sign-api-openapi.yml#eraseSigning
+    - write: addSigner
+      reversal: removeSigner
+      reversal_operation_id: removeSigner
+      window: >-
+        While the signer is still PENDING. removeSigner retracts the ceremony link before removing
+        the signer; a signer who has already signed cannot be removed (409).
+      source: openapi/tvarka-sign-api-openapi.yml#removeSigner
+    - write: uploadFile
+      reversal: deleteFile
+      reversal_operation_id: deleteFile
+      window: >-
+        Any time. Drops the bytes. Signings that already referenced the token are untouched, because
+        they hold their own copy - so deleting a file does NOT unwind a ceremony built from it.
+      source: openapi/tvarka-sign-api-openapi.yml#deleteFile
+    - write: createSigning (bulk)
+      reversal: eraseSignings
+      reversal_operation_id: eraseSignings
+      window: >-
+        Terminal signings only. Bulk erasure purges the client's terminal signing records and any
+        order-owned uploads; IN-FLIGHT signings are left untouched and must be erased individually
+        if cancellation is intended.
+      source: openapi/tvarka-sign-api-openapi.yml#eraseSignings
+    - write: archiveSigning
+      reversal: none
+      irreversible: true
+      note: >-
+        An upgrade ADDS a version and never replaces one - the pre-archive version is kept - so
+        nothing is lost, but there is no downgrade operation.
+      source: openapi/tvarka-sign-api-openapi.yml#archiveSigning
+    - write: 'the signature itself'
+      reversal: none
+      irreversible: true
+      note: >-
+        Not an API action at all: a signature is produced by the signer with their own eID. Nothing
+        in this API creates or revokes one.
+  no_numeric_window:
+    - >-
+      None of the reversal operations carry a numeric deadline (no "within N days"). The window is
+      STATE-bound, not clock-bound - reversal is available while the invitation is unused or the
+      signing is not terminal - and that is what the docs state. No numeric window has been invented
+      here.

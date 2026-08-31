@@ -1,0 +1,196 @@
+{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+        "tools": [
+            {
+                "name": "list_documents",
+                "title": "List workspace documents",
+                "description": "Documents in the tenant workspace vault that can be sent for signing. Returns documentId values for request_signatures.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Case-insensitive substring of the document title."
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100
+                        }
+                    },
+                    "additionalProperties": false
+                }
+            },
+            {
+                "name": "request_signatures",
+                "title": "Request signatures",
+                "description": "Open a qualified signing ceremony on a vault document for one or more signers. Returns a ceremony URL per signer, or emails them directly when delivery is \"email\". Billed per signature on completion.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "documentId": {
+                            "type": "string",
+                            "description": "From list_documents."
+                        },
+                        "signers": {
+                            "type": "array",
+                            "minItems": 1,
+                            "maxItems": 20,
+                            "description": "The people who must sign, in no particular order.",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "description": "The signer's email address."
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "description": "The signer's full name."
+                                    },
+                                    "language": {
+                                        "type": "string",
+                                        "enum": [
+                                            "lt",
+                                            "en"
+                                        ],
+                                        "description": "Language of the invitation email and ceremony page."
+                                    },
+                                    "personalCode": {
+                                        "type": "string",
+                                        "pattern": "^[0-9]{11}$",
+                                        "description": "Optional Lithuanian identity lock. Never returned by the API."
+                                    },
+                                    "methods": {
+                                        "type": "array",
+                                        "minItems": 1,
+                                        "uniqueItems": true,
+                                        "items": {
+                                            "type": "string",
+                                            "enum": [
+                                                "nfc",
+                                                "smart_id",
+                                                "mobile_id"
+                                            ]
+                                        },
+                                        "description": "Allowed methods for this signer; defaults to all three."
+                                    }
+                                },
+                                "required": [
+                                    "email"
+                                ],
+                                "additionalProperties": false
+                            }
+                        },
+                        "title": {
+                            "type": "string",
+                            "description": "Overrides the document's own title on the ceremony page."
+                        },
+                        "delivery": {
+                            "type": "string",
+                            "enum": [
+                                "link",
+                                "email"
+                            ],
+                            "description": "link (default) returns ceremony URLs for you to deliver; email has Tvarka email each signer."
+                        },
+                        "expiresInDays": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 30
+                        }
+                    },
+                    "required": [
+                        "documentId",
+                        "signers"
+                    ],
+                    "additionalProperties": false
+                }
+            },
+            {
+                "name": "get_signing",
+                "title": "Get signing status",
+                "description": "The current state of one signing and each of its signers.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "signingId": {
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "signingId"
+                    ],
+                    "additionalProperties": false
+                }
+            },
+            {
+                "name": "list_signings",
+                "title": "List signings",
+                "description": "Signings raised by this tenant, newest first.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "status": {
+                            "type": "string",
+                            "enum": [
+                                "pending",
+                                "completed",
+                                "declined",
+                                "cancelled",
+                                "expired",
+                                "failed"
+                            ]
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100
+                        }
+                    },
+                    "additionalProperties": false
+                }
+            },
+            {
+                "name": "remind_signer",
+                "title": "Remind a signer",
+                "description": "Re-send one signer their invitation email. Limited to one reminder per signer per hour.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "signingId": {
+                            "type": "string"
+                        },
+                        "signerEmail": {
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "signingId",
+                        "signerEmail"
+                    ],
+                    "additionalProperties": false
+                }
+            },
+            {
+                "name": "cancel_signing",
+                "title": "Cancel a signing",
+                "description": "Retract every outstanding invitation and close the signing. Signatures already collected are untouched and remain valid.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "signingId": {
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "signingId"
+                    ],
+                    "additionalProperties": false
+                }
+            }
+        ]
+    }
+}
