@@ -41,9 +41,6 @@ tags:
 - Identity
 - Trust Services
 - GDPR
-- MCP
-- Agent Ready
-- Electronic Signature
 tags_raw:
 - Authentication
 - Digital Signature
@@ -212,7 +209,7 @@ apis:
   humanURL: https://atk.tvarka.pro/docs/
   baseURL: https://atk.tvarka.pro/v1
   tags:
-  - Well-known
+  - .well Known
   tags_raw:
   - Well-known
   properties:
@@ -239,6 +236,15 @@ apis:
   baseURL: https://sign-api.tvarka.pro
   humanURL: https://sign-api.tvarka.pro/docs
   tags:
+  - Digital Signature
+  - QES
+  - eIDAS
+  - Lithuania
+  - OpenAPI
+  - MCP
+  - Webhook
+  - Identity
+  tags_raw:
   - Digital Signature
   - QES
   - eIDAS

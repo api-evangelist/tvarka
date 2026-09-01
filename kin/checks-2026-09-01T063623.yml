@@ -1,31 +1,30 @@
 ---
 kin_checks:
-  slug: tvarka-atk-api
-  schema_version: 0.16.0
-  scored_at: '2026-08-29'
-  run_ts: 2026-08-29T230545
+  slug: tvarka
+  schema_version: 0.17.2
+  scored_at: '2026-09-01'
+  run_ts: 2026-09-01T063623
   note: Actionable checks only (missed + partial). earned/na are every other check
-    in rubric/scoring-0.16.0.yml; counts below let you verify that.
+    in rubric/scoring-0.17.2.yml; counts below let you verify that.
   counts:
     total: 130
-    earned: 52
-    partial: 18
+    earned: 60
+    partial: 10
     missed: 36
     na: 24
   checks:
   - id: well_known_published
     status: missed
-  - id: apis_json_self_hosted
+  - id: llms_txt_published
     status: missed
   - id: openapi_3_2
     status: missed
-    detail: 0 of 9 openapi documents pass
+    detail: 0 of 8 openapi documents pass
   - id: openapi_3_0
     status: missed
-    detail: 0 of 9 openapi documents pass
-  - id: credentials_not_in_query
+    detail: 0 of 8 openapi documents pass
+  - id: servers_resolvable
     status: missed
-    detail: 0 of 9 openapi documents pass
   - id: json_schema_present
     status: missed
   - id: json_schema_per_resource
@@ -70,7 +69,7 @@ kin_checks:
     status: missed
   - id: reg_oauth_scopes
     status: missed
-  - id: mcp_server
+  - id: reversibility_documented
     status: missed
   - id: well_known_catalog
     status: missed
@@ -90,53 +89,30 @@ kin_checks:
     status: missed
   - id: info_complete
     status: partial
-    earned: 0.89
-    detail: 2 of 9 openapi documents pass
-  - id: operations_summary_coverage
-    status: partial
-    earned: 4.67
-    detail: 7 of 9 openapi documents pass
+    earned: 0.5
+    detail: 1 of 8 openapi documents pass
   - id: operations_description_coverage
     status: partial
-    earned: 3.33
-    detail: 5 of 9 openapi documents pass
-  - id: operations_tagged
-    status: partial
-    earned: 3.11
-    detail: 7 of 9 openapi documents pass
-  - id: operations_operation_ids
-    status: partial
-    earned: 3.11
-    detail: 7 of 9 openapi documents pass
-  - id: response_coverage
-    status: partial
-    earned: 3.89
-    detail: 7 of 9 openapi documents pass
-  - id: error_responses_documented
-    status: partial
-    earned: 3.11
-    detail: 7 of 9 openapi documents pass
+    earned: 3.75
+    detail: 5 of 8 openapi documents pass
   - id: examples_present
     status: partial
     earned: 1.0
   - id: components_reuse
     status: partial
-    earned: 2.67
-    detail: 8 of 9 openapi documents pass
+    earned: 2.63
+    detail: 7 of 8 openapi documents pass
+  - id: credentials_not_in_query
+    status: partial
+    earned: 0.38
+    detail: 1 of 8 openapi documents pass
   - id: webhooks_or_callbacks
     status: partial
-    earned: 0.44
-    detail: 2 of 9 openapi documents pass
-  - id: agent_skill_present
+    earned: 0.25
+    detail: 1 of 8 openapi documents pass
+  - id: mcp_server
     status: partial
-    earned: 0.75
-  - id: agentic_access
-    status: partial
-    earned: 2.5
-    detail: 'authorship: derived'
-  - id: reversibility_documented
-    status: partial
-    earned: 2.4
+    earned: 4.8
     detail: 'grade: documented'
   - id: auth_clarity
     status: partial
@@ -146,15 +122,7 @@ kin_checks:
     status: partial
     earned: 4.5
     detail: 'grade: documented'
-  - id: error_semantics
-    status: partial
-    earned: 4.0
-    detail: 'grade: documented'
   - id: openapi_examples
     status: partial
     earned: 3.5
     detail: 'grade: partial'
-  - id: agent_skills
-    status: partial
-    earned: 1.25
-    detail: 'authorship: derived'
