@@ -320,6 +320,8 @@ x-enrichment:
   artifacts_added: 17
   pass: local-v1
 common:
+- type: Website
+  url: https://www.tvarka.pro/
 - type: AgenticAccess
   url: agentic-access/tvarka-agentic-access.yml
 - type: DomainSecurity
