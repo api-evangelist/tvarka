@@ -3,20 +3,22 @@ method: probed
 status: published
 source: https://sign-api.tvarka.pro/mcp
 docs:
-  - https://sign-api.tvarka.pro/docs
-  - https://sign-api.tvarka.pro/llms.txt
-
+- https://sign-api.tvarka.pro/docs
+- https://sign-api.tvarka.pro/llms.txt
 deployment:
   mode: remote
   endpoint: https://sign-api.tvarka.pro/mcp
   auth: api-key
   verified: probed
-  note: >-
-    Streamable HTTP. tools/list and initialize both answer ANONYMOUSLY with the real tool set and
-    real inputSchemas (probed 2026-08-31, HTTP 200, application/json) - only tool INVOCATION needs
-    the bearer key. There is no stdio package: Tvarka publishes no npm or PyPI MCP server, so an
-    agent reaches this surface over HTTP or not at all.
-
+  note: 'Streamable HTTP. tools/list and initialize both answer ANONYMOUSLY with the real tool set and
+    real inputSchemas (probed 2026-08-31, HTTP 200, application/json) - only tool INVOCATION needs the
+    bearer key. There is no stdio package: Tvarka publishes no npm or PyPI MCP server, so an agent reaches
+    this surface over HTTP or not at all.'
+  probe_prior: (never probed)
+  probe: live
+  probe_why: live
+  checked: '2026-09-11'
+  source: claimed-backlog re-probe 2026-09-11
 server:
   name: Tvarka Sign
   registry_name: pro.tvarka/sign
@@ -27,13 +29,11 @@ server:
   capabilities:
     tools:
       listChanged: false
-  instructions: >-
-    Qualified electronic signing of Lithuanian documents. Find a document in the workspace vault,
-    request signatures from one or more people, then track the ceremony to completion. Signers
-    receive a link and sign with their eID (LT ATK over NFC in the Tvarka Sign app, Smart-ID or
-    Mobile-ID); a signature is always a human act, so no tool here signs anything. Signatures are
-    billed per signature to the workspace.
-
+  instructions: Qualified electronic signing of Lithuanian documents. Find a document in the workspace
+    vault, request signatures from one or more people, then track the ceremony to completion. Signers
+    receive a link and sign with their eID (LT ATK over NFC in the Tvarka Sign app, Smart-ID or Mobile-ID);
+    a signature is always a human act, so no tool here signs anything. Signatures are billed per signature
+    to the workspace.
 authentication:
   scheme: http-bearer
   header: 'Authorization: Bearer <key>'
@@ -41,70 +41,91 @@ authentication:
     production: tsk_live_
     sandbox: tsk_test_
   provisioning: Issued by Tvarka during onboarding and shown once; request at info@tvarka.pro.
-  note: >-
-    The key acts as a named workspace user - if that person's role is revoked or the workspace is
+  note: The key acts as a named workspace user - if that person's role is revoked or the workspace is
     suspended, the key stops working. tools/list is readable without it; every tool call is not.
-
-design_note: >-
-  Tools address documents already in the tenant's workspace vault, so no document has to travel
-  through an agent's context. That is a deliberate agent-safety property the provider states in its
-  own docs, not an inference.
-
+design_note: Tools address documents already in the tenant's workspace vault, so no document has to travel
+  through an agent's context. That is a deliberate agent-safety property the provider states in its own
+  docs, not an inference.
 agent_notes:
-  - request_signatures is a BILLED, legally significant action - it opens a real qualified signing
-    ceremony and emails or links real people. It is the one tool that should sit behind human
-    approval.
-  - No tool produces a signature. A qualified signature is a human act performed by the signer with
-    their own eID; the API only orchestrates.
-  - cancel_signing is the reversal path for request_signatures, but it only retracts UNUSED
-    invitations - signatures already collected remain valid and downloadable.
-  - remind_signer is rate-limited by the provider to one reminder per signer per hour.
-  - A tsk_test_ key drives the whole lifecycle through POST /v1/signings/{id}/simulate without a
-    real eID, and every sandbox artifact is flagged "sandbox true".
-
+- request_signatures is a BILLED, legally significant action - it opens a real qualified signing ceremony
+  and emails or links real people. It is the one tool that should sit behind human approval.
+- No tool produces a signature. A qualified signature is a human act performed by the signer with their
+  own eID; the API only orchestrates.
+- cancel_signing is the reversal path for request_signatures, but it only retracts UNUSED invitations
+  - signatures already collected remain valid and downloadable.
+- remind_signer is rate-limited by the provider to one reminder per signer per hour.
+- A tsk_test_ key drives the whole lifecycle through POST /v1/signings/{id}/simulate without a real eID,
+  and every sandbox artifact is flagged "sandbox true".
 tools:
-  - name: list_documents
-    title: List workspace documents
-    description: >-
-      Documents in the tenant workspace vault that can be sent for signing. Returns documentId
-      values for request_signatures.
-    input_schema_properties: [query, limit]
-    required: []
-  - name: request_signatures
-    title: Request signatures
-    description: >-
-      Open a qualified signing ceremony on a vault document for one or more signers. Returns a
-      ceremony URL per signer, or emails them directly when delivery is "email". Billed per
-      signature on completion.
-    input_schema_properties: [documentId, signers, title, delivery, expiresInDays]
-    required: [documentId, signers]
-  - name: get_signing
-    title: Get signing status
-    description: The current state of one signing and each of its signers.
-    input_schema_properties: [signingId]
-    required: [signingId]
-  - name: list_signings
-    title: List signings
-    description: Signings raised by this tenant, newest first.
-    input_schema_properties: [status, limit]
-    required: []
-  - name: remind_signer
-    title: Remind a signer
-    description: >-
-      Re-send one signer their invitation email. Limited to one reminder per signer per hour.
-    input_schema_properties: [signingId, signerEmail]
-    required: [signingId, signerEmail]
-  - name: cancel_signing
-    title: Cancel a signing
-    description: >-
-      Retract every outstanding invitation and close the signing. Signatures already collected are
-      untouched and remain valid.
-    input_schema_properties: [signingId]
-    required: [signingId]
-
+- name: list_documents
+  title: List workspace documents
+  description: Documents in the tenant workspace vault that can be sent for signing. Returns documentId
+    values for request_signatures.
+  input_schema_properties:
+  - query
+  - limit
+  required: []
+- name: request_signatures
+  title: Request signatures
+  description: Open a qualified signing ceremony on a vault document for one or more signers. Returns
+    a ceremony URL per signer, or emails them directly when delivery is "email". Billed per signature
+    on completion.
+  input_schema_properties:
+  - documentId
+  - signers
+  - title
+  - delivery
+  - expiresInDays
+  required:
+  - documentId
+  - signers
+- name: get_signing
+  title: Get signing status
+  description: The current state of one signing and each of its signers.
+  input_schema_properties:
+  - signingId
+  required:
+  - signingId
+- name: list_signings
+  title: List signings
+  description: Signings raised by this tenant, newest first.
+  input_schema_properties:
+  - status
+  - limit
+  required: []
+- name: remind_signer
+  title: Remind a signer
+  description: Re-send one signer their invitation email. Limited to one reminder per signer per hour.
+  input_schema_properties:
+  - signingId
+  - signerEmail
+  required:
+  - signingId
+  - signerEmail
+- name: cancel_signing
+  title: Cancel a signing
+  description: Retract every outstanding invitation and close the signing. Signatures already collected
+    are untouched and remain valid.
+  input_schema_properties:
+  - signingId
+  required:
+  - signingId
 raw_tools_list: mcp/tvarka-sign-api-tools-list.json
-
 x-evidence:
-  - {fetched: '2026-08-31', method: 'POST tools/list', url: 'https://sign-api.tvarka.pro/mcp', http_status: 200, content_type: application/json, bytes: 3494, auth: none}
-  - {fetched: '2026-08-31', method: 'POST initialize', url: 'https://sign-api.tvarka.pro/mcp', http_status: 200, content_type: application/json, auth: none}
-  - {fetched: '2026-08-31', url: 'https://sign-api.tvarka.pro/llms.txt', http_status: 200, note: 'provider-published tool list, matches the live tools/list exactly'}
+- fetched: '2026-08-31'
+  method: POST tools/list
+  url: https://sign-api.tvarka.pro/mcp
+  http_status: 200
+  content_type: application/json
+  bytes: 3494
+  auth: none
+- fetched: '2026-08-31'
+  method: POST initialize
+  url: https://sign-api.tvarka.pro/mcp
+  http_status: 200
+  content_type: application/json
+  auth: none
+- fetched: '2026-08-31'
+  url: https://sign-api.tvarka.pro/llms.txt
+  http_status: 200
+  note: provider-published tool list, matches the live tools/list exactly
