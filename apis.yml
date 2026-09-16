@@ -76,98 +76,6 @@ tags_raw:
 - Trust Services
 - GDPR
 apis:
-- aid: tvarka-atk-api:tvarka-atk-api-auth-api
-  name: Tvarka ATK API Auth API
-  description: The eID authentication ceremony (`/v1/auth/*`).
-  humanURL: https://atk.tvarka.pro/docs/
-  baseURL: https://atk.tvarka.pro/v1
-  tags:
-  - Authentication
-  tags_raw:
-  - Auth
-  properties:
-  - type: OpenAPI
-    url: openapi/tvarka-atk-api-auth-api-openapi.yml
-  - type: PostmanCollection
-    url: https://atk.tvarka.pro/postman/auth.json
-  - type: PostmanCollection
-    url: https://atk.tvarka.pro/postman/sign.json
-  - type: Documentation
-    url: https://atk.tvarka.pro/docs/
-  - type: APIsJSON
-    url: https://atk.tvarka.pro/apis.json
-- aid: tvarka-atk-api:tvarka-atk-api-erasure-api
-  name: Tvarka ATK API Erasure API
-  description: The Erasure API from Tvarka ATK API — 3 operation(s) for erasure.
-  humanURL: https://atk.tvarka.pro/docs/
-  baseURL: https://atk.tvarka.pro/v1
-  tags:
-  - Erasure
-  properties:
-  - type: OpenAPI
-    url: openapi/tvarka-atk-api-erasure-api-openapi.yml
-  - type: PostmanCollection
-    url: https://atk.tvarka.pro/postman/auth.json
-  - type: PostmanCollection
-    url: https://atk.tvarka.pro/postman/sign.json
-  - type: Documentation
-    url: https://atk.tvarka.pro/docs/
-  - type: APIsJSON
-    url: https://atk.tvarka.pro/apis.json
-- aid: tvarka-atk-api:tvarka-atk-api-ltv-api
-  name: Tvarka ATK API LTV API
-  description: Post-signature timestamp and long-term-validation upgrades.
-  humanURL: https://atk.tvarka.pro/docs/
-  baseURL: https://atk.tvarka.pro/v1
-  tags:
-  - LTV
-  properties:
-  - type: OpenAPI
-    url: openapi/tvarka-atk-api-ltv-api-openapi.yml
-  - type: PostmanCollection
-    url: https://atk.tvarka.pro/postman/auth.json
-  - type: PostmanCollection
-    url: https://atk.tvarka.pro/postman/sign.json
-  - type: Documentation
-    url: https://atk.tvarka.pro/docs/
-  - type: APIsJSON
-    url: https://atk.tvarka.pro/apis.json
-- aid: tvarka-atk-api:tvarka-atk-api-pairing-api
-  name: Tvarka ATK API Pairing API
-  description: NFC remote pairing - complete a request by tapping a card on a different device.
-  humanURL: https://atk.tvarka.pro/docs/
-  baseURL: https://atk.tvarka.pro/v1
-  tags:
-  - Pairing
-  properties:
-  - type: OpenAPI
-    url: openapi/tvarka-atk-api-pairing-api-openapi.yml
-  - type: PostmanCollection
-    url: https://atk.tvarka.pro/postman/auth.json
-  - type: PostmanCollection
-    url: https://atk.tvarka.pro/postman/sign.json
-  - type: Documentation
-    url: https://atk.tvarka.pro/docs/
-  - type: APIsJSON
-    url: https://atk.tvarka.pro/apis.json
-- aid: tvarka-atk-api:tvarka-atk-api-sign-api
-  name: Tvarka ATK API Sign API
-  description: The QES signing ceremony (`/v1/sign/*`).
-  humanURL: https://atk.tvarka.pro/docs/
-  baseURL: https://atk.tvarka.pro/v1
-  tags:
-  - Sign
-  properties:
-  - type: OpenAPI
-    url: openapi/tvarka-atk-api-sign-api-openapi.yml
-  - type: PostmanCollection
-    url: https://atk.tvarka.pro/postman/auth.json
-  - type: PostmanCollection
-    url: https://atk.tvarka.pro/postman/sign.json
-  - type: Documentation
-    url: https://atk.tvarka.pro/docs/
-  - type: APIsJSON
-    url: https://atk.tvarka.pro/apis.json
 - aid: tvarka-atk-api:tvarka-atk-api-tvarka-atk-api-api
   name: Tvarka ATK API Tvarka ATK API
   description: The Tvarka ATK API API from Tvarka ATK API — 0 operation(s) for tvarka atk api.
@@ -186,8 +94,9 @@ apis:
     url: https://atk.tvarka.pro/apis.json
 - aid: tvarka-atk-api:tvarka-atk-api-tvarka-atk-qes-signing-api-paid-tier-addendum-api
   name: Tvarka ATK API Tvarka ATK QES Signing API (paid Tier Addendum) API
-  description: The Tvarka ATK QES Signing API (paid Tier Addendum) API from Tvarka ATK API — 0 operation(s)
-    for tvarka atk qes signing api (paid tier addendum).
+  description: >-
+    The Tvarka ATK QES Signing API (paid Tier Addendum) API from Tvarka ATK API — 0 operation(s) for tvarka
+    atk qes signing api (paid tier addendum).
   humanURL: https://atk.tvarka.pro/docs/
   baseURL: https://atk.tvarka.pro/v1
   tags: []
@@ -202,52 +111,15 @@ apis:
     url: https://atk.tvarka.pro/docs/
   - type: APIsJSON
     url: https://atk.tvarka.pro/apis.json
-- aid: tvarka-atk-api:tvarka-atk-api-validation-api
-  name: Tvarka ATK API Validation API
-  description: Standalone advisory validation of signed artifacts.
-  humanURL: https://atk.tvarka.pro/docs/
-  baseURL: https://atk.tvarka.pro/v1
-  tags:
-  - Validation
-  properties:
-  - type: OpenAPI
-    url: openapi/tvarka-atk-api-validation-api-openapi.yml
-  - type: PostmanCollection
-    url: https://atk.tvarka.pro/postman/auth.json
-  - type: PostmanCollection
-    url: https://atk.tvarka.pro/postman/sign.json
-  - type: Documentation
-    url: https://atk.tvarka.pro/docs/
-  - type: APIsJSON
-    url: https://atk.tvarka.pro/apis.json
-- aid: tvarka-atk-api:tvarka-atk-api-well-known-api
-  name: Tvarka ATK API Well Known API
-  description: Keys for verifying the optional `assertion` JWT.
-  humanURL: https://atk.tvarka.pro/docs/
-  baseURL: https://atk.tvarka.pro/v1
-  tags:
-  - .well Known
-  tags_raw:
-  - Well-known
-  properties:
-  - type: OpenAPI
-    url: openapi/tvarka-atk-api-well-known-api-openapi.yml
-  - type: PostmanCollection
-    url: https://atk.tvarka.pro/postman/auth.json
-  - type: PostmanCollection
-    url: https://atk.tvarka.pro/postman/sign.json
-  - type: Documentation
-    url: https://atk.tvarka.pro/docs/
-  - type: APIsJSON
-    url: https://atk.tvarka.pro/apis.json
 - aid: tvarka-atk-api:tvarka-sign-api
   name: Tvarka Sign API
-  description: 'Machine channel for Tvarka Sign: post a document and a list of signers and Tvarka runs
-    its ordinary qualified signing ceremony for each of them on the hosted page or in the Tvarka Sign
-    mobile app (LT ATK over NFC, Smart-ID, Mobile-ID). Nothing in the API signs anything - a signature
-    is always a human act with the signer''s own eID - so every operation is about getting a document
-    in front of the right person and learning what they did. Orchestration sibling of the card-level ATK
-    API; RFC 9457 problem details, HMAC-signed webhooks, and a hosted MCP server.'
+  description: >-
+    Machine channel for Tvarka Sign: post a document and a list of signers and Tvarka runs its ordinary
+    qualified signing ceremony for each of them on the hosted page or in the Tvarka Sign mobile app (LT
+    ATK over NFC, Smart-ID, Mobile-ID). Nothing in the API signs anything - a signature is always a human
+    act with the signer's own eID - so every operation is about getting a document in front of the right
+    person and learning what they did. Orchestration sibling of the card-level ATK API; RFC 9457 problem
+    details, HMAC-signed webhooks, and a hosted MCP server.
   version: 1.2.1
   created: '2026-08-31'
   modified: '2026-08-31'
@@ -306,6 +178,204 @@ apis:
     url: rate-limits/tvarka-sign-api-rate-limits.yml
   - type: AgentSkill
     url: skills/tvarka-sign-api-request-signatures.md
+- aid: tvarka:tvarka-auth-api
+  name: Tvarka ATK API Auth API
+  description: The eID authentication ceremony (`/v1/auth/*`).
+  humanURL: https://atk.tvarka.pro/docs/
+  baseURL: https://atk.tvarka.pro/v1
+  tags:
+  - Auth
+  properties:
+  - type: OpenAPI
+    url: openapi/tvarka-auth-api-openapi.yml
+  - type: PostmanCollection
+    url: https://atk.tvarka.pro/postman/auth.json
+  - type: PostmanCollection
+    url: https://atk.tvarka.pro/postman/sign.json
+  - type: Documentation
+    url: https://atk.tvarka.pro/docs/
+  - type: APIsJSON
+    url: https://atk.tvarka.pro/apis.json
+- aid: tvarka:tvarka-batches-api
+  name: Tvarka ATK API Batches API
+  description: The Batches API from Tvarka ATK API — 2 operation(s) for batches.
+  humanURL: https://atk.tvarka.pro/docs/
+  baseURL: https://atk.tvarka.pro/v1
+  tags:
+  - Batches
+  properties:
+  - type: OpenAPI
+    url: openapi/tvarka-batches-api-openapi.yml
+  - type: PostmanCollection
+    url: https://atk.tvarka.pro/postman/auth.json
+  - type: PostmanCollection
+    url: https://atk.tvarka.pro/postman/sign.json
+  - type: Documentation
+    url: https://atk.tvarka.pro/docs/
+  - type: APIsJSON
+    url: https://atk.tvarka.pro/apis.json
+- aid: tvarka:tvarka-erasure-api
+  name: Tvarka ATK API Erasure API
+  description: The Erasure API from Tvarka ATK API — 3 operation(s) for erasure.
+  humanURL: https://atk.tvarka.pro/docs/
+  baseURL: https://atk.tvarka.pro/v1
+  tags:
+  - Erasure
+  properties:
+  - type: OpenAPI
+    url: openapi/tvarka-erasure-api-openapi.yml
+  - type: PostmanCollection
+    url: https://atk.tvarka.pro/postman/auth.json
+  - type: PostmanCollection
+    url: https://atk.tvarka.pro/postman/sign.json
+  - type: Documentation
+    url: https://atk.tvarka.pro/docs/
+  - type: APIsJSON
+    url: https://atk.tvarka.pro/apis.json
+- aid: tvarka:tvarka-files-api
+  name: Tvarka ATK API Files API
+  description: The Files API from Tvarka ATK API — 2 operation(s) for files.
+  humanURL: https://atk.tvarka.pro/docs/
+  baseURL: https://atk.tvarka.pro/v1
+  tags:
+  - Files
+  properties:
+  - type: OpenAPI
+    url: openapi/tvarka-files-api-openapi.yml
+  - type: PostmanCollection
+    url: https://atk.tvarka.pro/postman/auth.json
+  - type: PostmanCollection
+    url: https://atk.tvarka.pro/postman/sign.json
+  - type: Documentation
+    url: https://atk.tvarka.pro/docs/
+  - type: APIsJSON
+    url: https://atk.tvarka.pro/apis.json
+- aid: tvarka:tvarka-ltv-api
+  name: Tvarka ATK API LTV API
+  description: Post-signature timestamp and long-term-validation upgrades.
+  humanURL: https://atk.tvarka.pro/docs/
+  baseURL: https://atk.tvarka.pro/v1
+  tags:
+  - LTV
+  properties:
+  - type: OpenAPI
+    url: openapi/tvarka-ltv-api-openapi.yml
+  - type: PostmanCollection
+    url: https://atk.tvarka.pro/postman/auth.json
+  - type: PostmanCollection
+    url: https://atk.tvarka.pro/postman/sign.json
+  - type: Documentation
+    url: https://atk.tvarka.pro/docs/
+  - type: APIsJSON
+    url: https://atk.tvarka.pro/apis.json
+- aid: tvarka:tvarka-pairing-api
+  name: Tvarka ATK API Pairing API
+  description: NFC remote pairing - complete a request by tapping a card on a different device.
+  humanURL: https://atk.tvarka.pro/docs/
+  baseURL: https://atk.tvarka.pro/v1
+  tags:
+  - Pairing
+  properties:
+  - type: OpenAPI
+    url: openapi/tvarka-pairing-api-openapi.yml
+  - type: PostmanCollection
+    url: https://atk.tvarka.pro/postman/auth.json
+  - type: PostmanCollection
+    url: https://atk.tvarka.pro/postman/sign.json
+  - type: Documentation
+    url: https://atk.tvarka.pro/docs/
+  - type: APIsJSON
+    url: https://atk.tvarka.pro/apis.json
+- aid: tvarka:tvarka-signings-api
+  name: Tvarka ATK API Signings API
+  description: Create and follow a signing.
+  humanURL: https://atk.tvarka.pro/docs/
+  baseURL: https://atk.tvarka.pro/v1
+  tags:
+  - Signings
+  properties:
+  - type: OpenAPI
+    url: openapi/tvarka-signings-api-openapi.yml
+  - type: PostmanCollection
+    url: https://atk.tvarka.pro/postman/auth.json
+  - type: PostmanCollection
+    url: https://atk.tvarka.pro/postman/sign.json
+  - type: Documentation
+    url: https://atk.tvarka.pro/docs/
+  - type: APIsJSON
+    url: https://atk.tvarka.pro/apis.json
+- aid: tvarka:tvarka-tvarka-atk-api-api
+  name: Tvarka ATK API Tvarka ATK API
+  description: The Tvarka ATK API API from Tvarka ATK API — 0 operation(s) for tvarka atk api.
+  humanURL: https://atk.tvarka.pro/docs/
+  baseURL: https://atk.tvarka.pro/v1
+  tags:
+  - Tvarka ATK API
+  properties:
+  - type: OpenAPI
+    url: openapi/tvarka-tvarka-atk-api-api-openapi.yml
+  - type: PostmanCollection
+    url: https://atk.tvarka.pro/postman/auth.json
+  - type: PostmanCollection
+    url: https://atk.tvarka.pro/postman/sign.json
+  - type: Documentation
+    url: https://atk.tvarka.pro/docs/
+  - type: APIsJSON
+    url: https://atk.tvarka.pro/apis.json
+- aid: tvarka:tvarka-tvarka-sign-api-api
+  name: Tvarka ATK API Tvarka Sign API
+  description: The Tvarka Sign API API from Tvarka ATK API — 0 operation(s) for tvarka sign api.
+  humanURL: https://atk.tvarka.pro/docs/
+  baseURL: https://atk.tvarka.pro/v1
+  tags:
+  - Tvarka Sign API
+  properties:
+  - type: OpenAPI
+    url: openapi/tvarka-tvarka-sign-api-api-openapi.yml
+  - type: PostmanCollection
+    url: https://atk.tvarka.pro/postman/auth.json
+  - type: PostmanCollection
+    url: https://atk.tvarka.pro/postman/sign.json
+  - type: Documentation
+    url: https://atk.tvarka.pro/docs/
+  - type: APIsJSON
+    url: https://atk.tvarka.pro/apis.json
+- aid: tvarka:tvarka-validation-api
+  name: Tvarka ATK API Validation API
+  description: Standalone advisory validation of signed artifacts.
+  humanURL: https://atk.tvarka.pro/docs/
+  baseURL: https://atk.tvarka.pro/v1
+  tags:
+  - Validation
+  properties:
+  - type: OpenAPI
+    url: openapi/tvarka-validation-api-openapi.yml
+  - type: PostmanCollection
+    url: https://atk.tvarka.pro/postman/auth.json
+  - type: PostmanCollection
+    url: https://atk.tvarka.pro/postman/sign.json
+  - type: Documentation
+    url: https://atk.tvarka.pro/docs/
+  - type: APIsJSON
+    url: https://atk.tvarka.pro/apis.json
+- aid: tvarka:tvarka-well-known-api
+  name: Tvarka ATK API Well Known API
+  description: Keys for verifying the optional `assertion` JWT.
+  humanURL: https://atk.tvarka.pro/docs/
+  baseURL: https://atk.tvarka.pro/v1
+  tags:
+  - Well-known
+  properties:
+  - type: OpenAPI
+    url: openapi/tvarka-well-known-api-openapi.yml
+  - type: PostmanCollection
+    url: https://atk.tvarka.pro/postman/auth.json
+  - type: PostmanCollection
+    url: https://atk.tvarka.pro/postman/sign.json
+  - type: Documentation
+    url: https://atk.tvarka.pro/docs/
+  - type: APIsJSON
+    url: https://atk.tvarka.pro/apis.json
 maintainers:
 - FN: Tvarka API team
   email: info@tvarka.pro
