@@ -1,12 +1,13 @@
 name: Tvarka ATK API
-description: A single REST API estate for Lithuanian eID authentication and qualified electronic signing (QES). The ATK API
-  reads the Lithuanian identity card itself - physical smart-card reader or NFC phone tap - through one request, polling,
-  webhook and metering model, and adds standalone validation, timestamping and long-term-validation (LTV)/archive trust services;
-  contract 1.4.0 withdrew the short-lived Smart-ID and Mobile-ID passthrough, so the ATK surface is deliberately card-only.
-  Hosted remote-method ceremonies moved to the separate Tvarka Sign API (sign-api.tvarka.pro), an orchestration contract with
-  RFC 9457 problem details and a live, anonymously introspectable MCP server at /mcp. eIDAS-aligned and EU-resident, operated
-  from Lithuania by Advokato M. Kiskio kontora INVENT and Socialiniai algoritmai, UAB, and priced per successful operation
-  with no subscription or minimum.
+description: A single REST API estate for Lithuanian eID authentication and qualified electronic signing
+  (QES). The ATK API reads the Lithuanian identity card itself - physical smart-card reader or NFC phone
+  tap - through one request, polling, webhook and metering model, and adds standalone validation, timestamping
+  and long-term-validation (LTV)/archive trust services; contract 1.4.0 withdrew the short-lived Smart-ID
+  and Mobile-ID passthrough, so the ATK surface is deliberately card-only. Hosted remote-method ceremonies
+  moved to the separate Tvarka Sign API (sign-api.tvarka.pro), an orchestration contract with RFC 9457
+  problem details and a live, anonymously introspectable MCP server at /mcp. eIDAS-aligned and EU-resident,
+  operated from Lithuania by Advokato M. Kiskio kontora INVENT and Socialiniai algoritmai, UAB, and priced
+  per successful operation with no subscription or minimum.
 deliveryModel:
   model: saas
   open_source: false
@@ -38,7 +39,7 @@ accessModel:
 image: https://tvarka.pro/static/img/tvarka-logo-closer.53b2d1b2a9b0.svg
 url: https://atk.tvarka.pro/apis.json
 created: '2026-08-02'
-modified: '2026-08-31'
+modified: '2026-09-16'
 specificationVersion: '0.23'
 tags:
 - Authentication
@@ -168,7 +169,7 @@ apis:
   - type: APIsJSON
     url: https://atk.tvarka.pro/apis.json
 - aid: tvarka-atk-api:tvarka-atk-api-tvarka-atk-api-api
-  name: Tvarka ATK API Tvarka ATK API API
+  name: Tvarka ATK API Tvarka ATK API
   description: The Tvarka ATK API API from Tvarka ATK API — 0 operation(s) for tvarka atk api.
   humanURL: https://atk.tvarka.pro/docs/
   baseURL: https://atk.tvarka.pro/v1
@@ -185,8 +186,8 @@ apis:
     url: https://atk.tvarka.pro/apis.json
 - aid: tvarka-atk-api:tvarka-atk-api-tvarka-atk-qes-signing-api-paid-tier-addendum-api
   name: Tvarka ATK API Tvarka ATK QES Signing API (paid Tier Addendum) API
-  description: The Tvarka ATK QES Signing API (paid Tier Addendum) API from Tvarka ATK API — 0 operation(s) for tvarka atk
-    qes signing api (paid tier addendum).
+  description: The Tvarka ATK QES Signing API (paid Tier Addendum) API from Tvarka ATK API — 0 operation(s)
+    for tvarka atk qes signing api (paid tier addendum).
   humanURL: https://atk.tvarka.pro/docs/
   baseURL: https://atk.tvarka.pro/v1
   tags: []
@@ -241,11 +242,12 @@ apis:
     url: https://atk.tvarka.pro/apis.json
 - aid: tvarka-atk-api:tvarka-sign-api
   name: Tvarka Sign API
-  description: 'Machine channel for Tvarka Sign: post a document and a list of signers and Tvarka runs its ordinary qualified
-    signing ceremony for each of them on the hosted page or in the Tvarka Sign mobile app (LT ATK over NFC, Smart-ID, Mobile-ID).
-    Nothing in the API signs anything - a signature is always a human act with the signer''s own eID - so every operation
-    is about getting a document in front of the right person and learning what they did. Orchestration sibling of the card-level
-    ATK API; RFC 9457 problem details, HMAC-signed webhooks, and a hosted MCP server.'
+  description: 'Machine channel for Tvarka Sign: post a document and a list of signers and Tvarka runs
+    its ordinary qualified signing ceremony for each of them on the hosted page or in the Tvarka Sign
+    mobile app (LT ATK over NFC, Smart-ID, Mobile-ID). Nothing in the API signs anything - a signature
+    is always a human act with the signer''s own eID - so every operation is about getting a document
+    in front of the right person and learning what they did. Orchestration sibling of the card-level ATK
+    API; RFC 9457 problem details, HMAC-signed webhooks, and a hosted MCP server.'
   version: 1.2.1
   created: '2026-08-31'
   modified: '2026-08-31'
