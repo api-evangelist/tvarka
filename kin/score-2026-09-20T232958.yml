@@ -1,33 +1,31 @@
-# Kin Score artifact — tvarka-atk-api — 2026-08-20T205517
+# Kin Score artifact — tvarka — 2026-09-20T232958
 # The API Evangelist rating (https://github.com/api-evangelist/kin-score). Generated; do not edit.
 ---
 kin_score:
-  slug: tvarka-atk-api
-  schema_version: 0.12.0
-  scored_at: '2026-08-20'
-  run_ts: 2026-08-20T205517
-  composite: 66.3
-  band: strong
+  slug: tvarka
+  schema_version: 0.22.0
+  scored_at: '2026-09-20'
+  run_ts: 2026-09-20T232958
+  composite: 68.7
+  band: exemplar
   facets:
-    discoverability: 81.5
-    contract_quality: 60.3
-    governance: 30.3
+    discoverability: 88.9
+    contract_quality: 64.3
+    contract_governance: 18.2
     operational_transparency: 57.9
     developer_ergonomics: 75.6
-    commercial_clarity: 84.2
-    contract_governance: 30.3
     access_clarity: 84.2
   agent_readiness:
-    score: 50.6
+    score: 46.2
     band: agent-native
     dimensions:
       spec_presence: true
       agentic_access: derived
       reversibility_documented: documented
-      mcp_server: false
-      auth_clarity: true
-      idempotency: documented
-      error_semantics: documented
+      mcp_server: verified
+      auth_clarity: bearer
+      idempotency: verified
+      error_semantics: verified
       openapi_examples: partial
       rate_limit_signal: verified
       event_surface_described: true
@@ -36,13 +34,17 @@ kin_score:
       consent_identity: false
       agent_card: false
       dry_run_mode: false
+      delegated_identity: false
+      protected_resource_metadata: false
+      dynamic_client_registration: false
+      agentic_commerce: false
   provenance:
     mcp: derived
     skills: derived
     agentic_access: derived
     conformance: first-party
     contracts:
-      total: 9
+      total: 12
       derived: 0
       coverage: 0.0
       callable: 100.0
