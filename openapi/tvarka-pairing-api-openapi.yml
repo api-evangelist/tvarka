@@ -1,8 +1,17 @@
 openapi: 3.2.0
 info:
-  title: Tvarka Atk Pairing API
-  version: 1.3.0
-  description: 'Operations tagged Pairing across 2 of this provider''s published API definitions: tvarka-atk-api-auth-openapi.yaml, tvarka-atk-api-openapi-original.json. Each path carries the servers of the definition it was published in.'
+  title: Tvarka ATK Pairing API
+  version: 1.4.0
+  summary: Lithuanian eID authentication, qualified signing, validation and LTV services.
+  description: 'The canonical ATK API contract. Authentication and signing are card-only: LT ATK physical-reader and NFC ceremonies, under one request, polling, webhook and metering model. Remote methods are not offered here - hosted remote-method ceremonies live in the Tvarka Sign developer API. Start with the five-minute quickstart or use the specialist authentication and signing references.'
+  termsOfService: https://atk.tvarka.pro/docs/lifecycle/
+  contact:
+    name: Tvarka API team
+    url: https://atk.tvarka.pro/docs/access/
+    email: info@tvarka.pro
+  license:
+    name: Proprietary
+    url: https://tvarka.pro/salygos/
 servers:
 - url: https://atk.tvarka.pro/v1
   description: 'Production. Sandbox runs on the same host - provider credentials issued with
@@ -17,13 +26,6 @@ tags:
   description: NFC remote pairing - complete a request by tapping a card on a different device.
 paths:
   /auth/{requestId}/pairing:
-    servers:
-    - url: https://atk.tvarka.pro/v1
-      description: 'Production. Sandbox runs on the same host - provider credentials issued with
-
-        environment=sandbox get the identical API against test-card material and are never billed.
-
-        '
     get:
       tags:
       - Pairing
@@ -35,32 +37,23 @@ paths:
 
         scans. The phone then calls `/pairing/claim`, receives the request''s `clientToken`, and
 
-        drives the same `/certificate` + `/complete` endpoints.
-
-        '
+        drives the same `/certificate` + `/complete` endpoints.'
       security:
       - basicAuth: []
       parameters:
-      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/AuthRequestId'
       responses:
         '200':
           description: Pairing payload.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PairingInfo'
+                $ref: '#/components/schemas/AuthPairingInfo'
         '404':
-          $ref: '#/components/responses/NotFound'
+          $ref: '#/components/responses/AuthNotFound'
         '409':
-          $ref: '#/components/responses/Conflict'
+          $ref: '#/components/responses/AuthConflict'
   /pairing/claim:
-    servers:
-    - url: https://atk.tvarka.pro/v1
-      description: 'Production. Sandbox runs on the same host - provider credentials issued with
-
-        environment=sandbox get the identical API against test-card material and are never billed.
-
-        '
     post:
       tags:
       - Pairing
@@ -70,115 +63,32 @@ paths:
 
         stored hashed. Returns the request''s `clientToken` and a minimal `summary` (purpose + label
 
-        only, never document contents).
-
-        '
+        only, never document contents).'
       security: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PairingClaimRequest'
+              $ref: '#/components/schemas/AuthPairingClaimRequest'
       responses:
         '200':
           description: Claimed.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PairingClaimResponse'
+                $ref: '#/components/schemas/AuthPairingClaimResponse'
         '404':
-          $ref: '#/components/responses/NotFound'
+          $ref: '#/components/responses/AuthNotFound'
         '409':
-          $ref: '#/components/responses/Conflict'
+          $ref: '#/components/responses/AuthConflict'
         '429':
-          $ref: '#/components/responses/RateLimited'
+          $ref: '#/components/responses/AuthRateLimited'
 components:
-  responses:
-    Conflict:
-      description: State/idempotency conflict (spent operation token, identity swap, terminal request).
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-    NotFound:
-      description: Unknown request.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-    RateLimited:
-      description: Too many requests.
-      headers:
-        Retry-After:
-          schema:
-            type: integer
-          description: Seconds.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-  parameters:
-    RequestId:
-      name: requestId
-      in: path
-      required: true
-      description: The `requestId` returned by `POST /auth/requests`.
-      schema:
-        type: string
-        format: uuid
   schemas:
-    PairingClaimRequest:
-      type: object
-      required:
-      - pairingToken
-      properties:
-        pairingToken:
-          type: string
-          minLength: 32
-          maxLength: 200
-        claimNonce:
-          type: string
-          maxLength: 120
-          description: Optional; when the originating UI can pre-share it, binds the tap to the intended session.
-        device:
-          type: object
-          additionalProperties: false
-          properties:
-            platform:
-              type: string
-              maxLength: 40
-            appVersion:
-              type: string
-              maxLength: 40
-            deviceName:
-              type: string
-              maxLength: 120
-    ErrorBody:
-      type: object
-      required:
-      - code
-      - message
-      properties:
-        code:
-          $ref: '#/components/schemas/ErrorCode'
-        message:
-          type: string
-        requestId:
-          type: string
-          format: uuid
-        retryable:
-          type: boolean
-    Error:
-      type: object
-      required:
-      - error
-      properties:
-        error:
-          $ref: '#/components/schemas/ErrorBody'
-    PairingInfo:
+    AuthPairingInfo:
       allOf:
-      - $ref: '#/components/schemas/PairingHint'
+      - $ref: '#/components/schemas/AuthPairingHint'
       - type: object
         required:
         - pairingToken
@@ -190,44 +100,7 @@ components:
           expiresAt:
             type: string
             format: date-time
-    PairingClaimResponse:
-      type: object
-      required:
-      - requestId
-      - purpose
-      - clientToken
-      - status
-      properties:
-        requestId:
-          type: string
-          format: uuid
-        purpose:
-          type: string
-          enum:
-          - auth
-          - sign
-        clientToken:
-          type: string
-        status:
-          $ref: '#/components/schemas/Status'
-        summary:
-          type: object
-          additionalProperties: true
-          description: Minimal display context {purpose, provider, audience, label, format?} - never document contents.
-    PairingHint:
-      type: object
-      properties:
-        pairingUrl:
-          type: string
-          format: uri
-          example: https://sign.tvarka.pro/atk-login/#PAIRING_TOKEN
-        deepLink:
-          type: string
-          example: tvarkasign://atk/pair/PAIRING_TOKEN
-        qrPayload:
-          type: string
-          example: https://sign.tvarka.pro/atk-login/#PAIRING_TOKEN
-    ErrorCode:
+    AuthErrorCode:
       type: string
       description: 'The full stable error-code catalog of the ATK API family (auth + sign + services);
 
@@ -309,7 +182,7 @@ components:
       - erasure_failed
       - pairing_service_unavailable
       - service_unavailable
-    Status:
+    AuthStatus:
       type: string
       description: 'Flat request status. Non-terminal - `pending`, `awaitingCard`, `awaitingCredentials`,
 
@@ -332,6 +205,124 @@ components:
       - pinBlocked
       - cardRemoved
       - certInvalid
+    AuthErrorBody:
+      type: object
+      required:
+      - code
+      - message
+      properties:
+        code:
+          $ref: '#/components/schemas/AuthErrorCode'
+        message:
+          type: string
+        requestId:
+          type: string
+          format: uuid
+        retryable:
+          type: boolean
+    AuthPairingClaimResponse:
+      type: object
+      required:
+      - requestId
+      - purpose
+      - clientToken
+      - status
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        purpose:
+          type: string
+          enum:
+          - auth
+          - sign
+        clientToken:
+          type: string
+        status:
+          $ref: '#/components/schemas/AuthStatus'
+        summary:
+          type: object
+          additionalProperties: true
+          description: Minimal display context {purpose, provider, audience, label, format?} - never document contents.
+    AuthError:
+      type: object
+      required:
+      - error
+      properties:
+        error:
+          $ref: '#/components/schemas/AuthErrorBody'
+    AuthPairingClaimRequest:
+      type: object
+      required:
+      - pairingToken
+      properties:
+        pairingToken:
+          type: string
+          minLength: 32
+          maxLength: 200
+        claimNonce:
+          type: string
+          maxLength: 120
+          description: Optional; when the originating UI can pre-share it, binds the tap to the intended session.
+        device:
+          type: object
+          additionalProperties: false
+          properties:
+            platform:
+              type: string
+              maxLength: 40
+            appVersion:
+              type: string
+              maxLength: 40
+            deviceName:
+              type: string
+              maxLength: 120
+    AuthPairingHint:
+      type: object
+      properties:
+        pairingUrl:
+          type: string
+          format: uri
+          example: https://sign.tvarka.pro/atk-login/#PAIRING_TOKEN
+        deepLink:
+          type: string
+          example: tvarkasign://atk/pair/PAIRING_TOKEN
+        qrPayload:
+          type: string
+          example: https://sign.tvarka.pro/atk-login/#PAIRING_TOKEN
+  responses:
+    AuthConflict:
+      description: State/idempotency conflict (spent operation token, identity swap, terminal request).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AuthError'
+    AuthRateLimited:
+      description: Too many requests.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AuthError'
+    AuthNotFound:
+      description: Unknown request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AuthError'
+  parameters:
+    AuthRequestId:
+      name: requestId
+      in: path
+      required: true
+      description: The `requestId` returned by `POST /auth/requests`.
+      schema:
+        type: string
+        format: uuid
   securitySchemes:
     basicAuth:
       type: http
@@ -362,6 +353,10 @@ components:
 externalDocs:
   description: Quickstart, SDKs, test data, pricing and lifecycle policy
   url: https://atk.tvarka.pro/docs/
-x-refined-from:
-- tvarka-atk-api-auth-openapi.yaml
-- tvarka-atk-api-openapi-original.json
+x-publication:
+  specialistContracts:
+  - https://atk.tvarka.pro/openapi/auth.yaml
+  - https://atk.tvarka.pro/openapi/sign.yaml
+  postmanCollections:
+  - https://atk.tvarka.pro/postman/auth.json
+  - https://atk.tvarka.pro/postman/sign.json

@@ -1,0 +1,541 @@
+openapi: 3.2.0
+info:
+  title: Tvarka Sign Batches API
+  version: 1.2.1
+  x-status: 'Live and publicly reachable at https://sign-api.tvarka.pro since 2026-08-27, on both production boxes and behind Cloudflare. The first production tenant was onboarded 2026-08-28 and the launch gate ceremony ran the same day: a production signing ordered through this API was signed with a real eID (Mobile-ID) and validated QUALIFIED_VALID, and webhook delivery was exercised the same day against an external production receiver with the HMAC signature and idempotency key verified on arrival.'
+  description: 'Machine channel for Tvarka Sign: post a document and a list of signers,
+
+    and Tvarka runs its ordinary qualified signing ceremony for each of them.'
+  contact:
+    name: Tvarka
+    email: info@tvarka.pro
+    url: https://tvarka.pro
+servers:
+- url: https://sign-api.tvarka.pro
+  description: Production and sandbox (selected by the key)
+security:
+- bearerAuth: []
+tags:
+- name: Batches
+paths:
+  /v1/batches:
+    post:
+      tags:
+      - Batches
+      operationId: createBatch
+      summary: Raise one signing per document for one set of parties
+      description: 'A batch is a **grouping, not a single signing act**. Every document
+
+        keeps its own ceremony and its own signature, because that is what
+
+        happens: the Lithuanian ID card produces one signature per document,
+
+        and the external ceremony has no USB door where the product''s batch
+
+        signing lives. This buys one call instead of N and one identifier to
+
+        poll. It does not buy one PIN for many documents, and nothing here
+
+        should be read as promising that.
+
+
+        Creation is atomic: either every signing in the batch is raised, or
+
+        the error response means none was.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  maxLength: 255
+                documents:
+                  type: array
+                  minItems: 1
+                  maxItems: 20
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      content:
+                        type: string
+                        format: byte
+                      fileToken:
+                        type: string
+                        format: uuid
+                      flatten:
+                        type: boolean
+                    required:
+                    - name
+                    additionalProperties: false
+                signers:
+                  type: array
+                  minItems: 1
+                  items:
+                    $ref: '#/components/schemas/SignerRequest'
+                delivery:
+                  type: string
+                  enum:
+                  - link
+                  - email
+                signingOrder:
+                  type: string
+                  enum:
+                  - parallel
+                  - sequential
+                webhookUrl:
+                  type: string
+                  format: uri
+                externalId:
+                  type: string
+                  maxLength: 120
+                expiresInDays:
+                  type: integer
+                  minimum: 1
+                softDeadlineInDays:
+                  type: integer
+                  minimum: 1
+                  description: Applied to every signing the batch raises.
+              required:
+              - title
+              - documents
+              - signers
+              additionalProperties: false
+      responses:
+        '401':
+          $ref: '#/components/responses/Problem'
+        '429':
+          $ref: '#/components/responses/Problem'
+        '201':
+          description: The batch and every signing it raised.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Batch'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '402':
+          $ref: '#/components/responses/Problem'
+  /v1/batches/{batchId}:
+    get:
+      tags:
+      - Batches
+      operationId: getBatch
+      summary: Poll a batch and every signing in it
+      parameters:
+      - $ref: '#/components/parameters/BatchId'
+      responses:
+        '401':
+          $ref: '#/components/responses/Problem'
+        '429':
+          $ref: '#/components/responses/Problem'
+        '200':
+          description: The batch.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Batch'
+        '404':
+          $ref: '#/components/responses/Problem'
+components:
+  schemas:
+    ProblemFieldError:
+      type: object
+      description: One rejected field.
+      properties:
+        pointer:
+          type: string
+          description: 'RFC 6901 JSON Pointer into the request body, for example
+
+            `/signers/0/email` or `/container/files/2/content`.
+
+            '
+        detail:
+          type: string
+      required:
+      - pointer
+      - detail
+    Problem:
+      type: object
+      description: RFC 9457.
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        errors:
+          type: array
+          description: 'Present on `validation-failed`, and on the single-fault problems
+
+            that name a field. Request-body validation collects rather than
+
+            failing fast, so a caller who got three fields wrong learns all
+
+            three from one response.
+
+            '
+          items:
+            $ref: '#/components/schemas/ProblemFieldError'
+        recoveryUrl:
+          type: string
+          format: uri-reference
+          description: 'Present on the payment-required refusal when a web page exists
+
+            that fixes it: the tenant''s payment setup, reached with an
+
+            ordinary browser login. Show it to your operator; it is not an
+
+            API endpoint.
+
+            '
+    SignerStatus:
+      type: string
+      enum:
+      - pending
+      - signed
+      - declined
+      - cancelled
+      - expired
+      - simulated
+      - waiting
+      - recorded
+      description: '`waiting` - a sequential signer whose turn has not come; their
+
+        ceremony link answers 404 until it does.
+
+        `recorded` - a viewer. Never invited, never blocks completion.
+
+        '
+    SignerRequest:
+      type: object
+      properties:
+        role:
+          type: string
+          enum:
+          - signer
+          - viewer
+          default: signer
+          description: 'A `viewer` is recorded but never invited, never gets a ceremony
+
+            link, and never holds up completion. Tvarka sends them nothing.
+
+            At least one signer is required.
+
+            '
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+          maxLength: 500
+        language:
+          type: string
+          enum:
+          - lt
+          - en
+          default: lt
+          description: Per signer, for their email and ceremony page.
+        personalCode:
+          type: string
+          pattern: ^[0-9]{11}$
+          description: 'Optional Lithuanian identity lock. Tvarka stores a keyed hash
+
+            and encrypted value, never returns the code, and refuses a
+
+            different authenticated signer.
+
+            '
+        methods:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          default:
+          - nfc
+          - smart_id
+          - mobile_id
+          items:
+            $ref: '#/components/schemas/SigningMethod'
+          description: 'Per-signer allow-list. `nfc` uses the Tvarka Sign mobile app;
+
+            Smart-ID and Mobile-ID use the hosted page or mobile app.
+
+            '
+      required:
+      - email
+      additionalProperties: false
+    Signing:
+      type: object
+      properties:
+        signingId:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/SigningStatus'
+        title:
+          type: string
+        delivery:
+          type: string
+          enum:
+          - link
+          - email
+        signingOrder:
+          type: string
+          enum:
+          - parallel
+          - sequential
+          description: '`sequential` releases one signer at a time in the order they were
+
+            posted. The signers who are waiting hold a ceremony link that
+
+            answers 404 until their turn, so the ordering is enforced rather
+
+            than merely unsent. A decline stops the workflow at the
+
+            decliner''s turn: the signing settles `declined` and the signers
+
+            still waiting are cancelled.
+
+            '
+        softDeadlineAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: 'The date the signing is wanted by, as opposed to `expiresAt`,
+
+            which is the date it dies on. Nothing expires here; it is when the
+
+            one automatic reminder goes out.
+
+            '
+        externalId:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        completionMode:
+          type: string
+          enum:
+          - qes_ceremony
+          - sandbox_simulation
+          nullable: true
+          description: '`qes_ceremony` means human eID signing. `sandbox_simulation`
+
+            exercises lifecycle/webhook integration and creates no
+
+            signature; its artifact is flagged `sandbox: true`.
+
+            '
+        erasedAt:
+          type: string
+          format: date-time
+          nullable: true
+        detail:
+          type: string
+          description: Present when the status needs a sentence of explanation.
+        signers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Signer'
+        document:
+          $ref: '#/components/schemas/SignedDocument'
+      additionalProperties: false
+    SigningStatus:
+      type: string
+      enum:
+      - pending
+      - completed
+      - declined
+      - cancelled
+      - expired
+      - failed
+      description: '`pending` - at least one signer can still sign.
+
+        `completed` - every signer signed.
+
+        `declined` - somebody declined and nobody else can still sign.
+
+        `expired` - the window closed first.
+
+        `cancelled` - you retracted it.
+
+        `failed` - the signing could not be prepared.
+
+        '
+    Signer:
+      type: object
+      properties:
+        signerId:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum:
+          - signer
+          - viewer
+          description: 'A `viewer` is a recorded non-signing party: no invitation is
+
+            raised, no ceremony link exists, and they never hold up
+
+            completion. Tvarka sends them nothing - you hold the webhook and
+
+            the download, and distribute. At least one signer is required.
+
+            '
+        email:
+          type: string
+          format: email
+          nullable: true
+        name:
+          type: string
+          nullable: true
+        language:
+          type: string
+          enum:
+          - lt
+          - en
+        status:
+          $ref: '#/components/schemas/SignerStatus'
+        ceremonyUrl:
+          type: string
+          format: uri
+          description: 'Present only while this signer can still sign. A finished or
+
+            retracted invitation has no live URL.
+
+            '
+        signedAt:
+          type: string
+          format: date-time
+          nullable: true
+        declinedAt:
+          type: string
+          format: date-time
+          nullable: true
+        declineReason:
+          type: string
+        methodsAllowed:
+          type: array
+          items:
+            $ref: '#/components/schemas/SigningMethod'
+        actualMethod:
+          allOf:
+          - $ref: '#/components/schemas/SigningMethod'
+          nullable: true
+          description: Present after a real signature; contains no identity data.
+        identityLocked:
+          type: boolean
+        identityMatched:
+          type: boolean
+          nullable: true
+          description: True only after a locked signer completes the real ceremony.
+        simulatedAt:
+          type: string
+          format: date-time
+          nullable: true
+      additionalProperties: false
+    SignedDocument:
+      type: object
+      description: 'The newest signed output. Absent until somebody signs, except on a
+
+        sandbox simulation, where it describes the unsigned artifact.
+
+        '
+      properties:
+        sha256:
+          type: string
+        bytes:
+          type: integer
+        mimeType:
+          type: string
+        sandbox:
+          type: boolean
+          description: 'Present and true only on a sandbox simulation. The bytes are a
+
+            real file to which no signature was added.
+
+            '
+        signed:
+          type: boolean
+          description: 'Present and false only on a sandbox simulation. Absent on a real
+
+            signing, where the output is signed by definition.
+
+            '
+    SigningMethod:
+      type: string
+      enum:
+      - nfc
+      - smart_id
+      - mobile_id
+      description: 'The orchestration methods. For direct LT ATK reader, USB, raw CAdES
+
+        and lower-level NFC integration, use the ATK API.
+
+        '
+    Batch:
+      type: object
+      properties:
+        batchId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        externalId:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        signings:
+          type: array
+          items:
+            $ref: '#/components/schemas/Signing'
+  parameters:
+    BatchId:
+      name: batchId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    Problem:
+      description: An RFC 9457 problem document.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: '`Authorization: Bearer <key>`. Keys are provisioned by Tvarka during
+
+        onboarding and shown once. A `tsk_live_` key acts on production; a
+
+        `tsk_test_` key is the sandbox.
+
+
+        The key acts as a named workspace user. If that person''s role is
+
+        revoked, or the workspace is suspended, the key stops working.
+
+        '

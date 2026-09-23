@@ -1,0 +1,247 @@
+openapi: 3.2.0
+info:
+  title: Tvarka Sign API
+  version: 1.2.1
+  x-status: 'Live and publicly reachable at https://sign-api.tvarka.pro since 2026-08-27, on both production boxes and behind Cloudflare. The first production tenant was onboarded 2026-08-28 and the launch gate ceremony ran the same day: a production signing ordered through this API was signed with a real eID (Mobile-ID) and validated QUALIFIED_VALID, and webhook delivery was exercised the same day against an external production receiver with the HMAC signature and idempotency key verified on arrival.'
+  description: 'Machine channel for Tvarka Sign: post a document and a list of signers,
+
+    and Tvarka runs its ordinary qualified signing ceremony for each of them.'
+  contact:
+    name: Tvarka
+    email: info@tvarka.pro
+    url: https://tvarka.pro
+servers:
+- url: https://sign-api.tvarka.pro
+  description: Production and sandbox (selected by the key)
+security:
+- bearerAuth: []
+tags:
+- name: Tvarka Sign API
+paths: {}
+webhooks:
+  signingEvent:
+    post:
+      summary: Signing event
+      description: 'Sent to `webhookUrl` as a signing progresses. Deliveries carry
+
+        `X-Tvarka-Signature: sha256=` keyed with
+
+        your webhook secret - verify it before acting - plus
+
+        `X-Tvarka-Idempotency-Key` and `X-Tvarka-Event`.
+
+
+        Retried with backoff on 5xx and transport failures. Delivery is a
+
+        convenience, never the only way to learn an outcome: polling always
+
+        works, and a failed delivery never changes a signing''s state.
+
+
+        The payload never carries a signer''s identity data - no personal
+
+        code, no certificate subject, no phone number. It echoes the email
+
+        you supplied and nothing more.'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                event:
+                  type: string
+                  enum:
+                  - signing.signer_signed
+                  - signing.signer_declined
+                  - signing.completed
+                  - signing.declined
+                  - signing.cancelled
+                  - signing.expired
+                  - signing.failed
+                signingId:
+                  type: string
+                  format: uuid
+                status:
+                  $ref: '#/components/schemas/SigningStatus'
+                externalId:
+                  type: string
+                occurredAt:
+                  type: string
+                  format: date-time
+                completionMode:
+                  type: string
+                  enum:
+                  - qes_ceremony
+                  - sandbox_simulation
+                signer:
+                  type: object
+                  properties:
+                    signerId:
+                      type: string
+                      format: uuid
+                    email:
+                      type: string
+                      format: email
+                    status:
+                      $ref: '#/components/schemas/SignerStatus'
+                    declineReason:
+                      type: string
+                document:
+                  $ref: '#/components/schemas/SignedDocument'
+      responses:
+        '401':
+          $ref: '#/components/responses/Problem'
+        '429':
+          $ref: '#/components/responses/Problem'
+        '200':
+          description: Acknowledged. Any 2xx stops redelivery.
+      tags:
+      - Tvarka Sign API
+components:
+  schemas:
+    ProblemFieldError:
+      type: object
+      description: One rejected field.
+      properties:
+        pointer:
+          type: string
+          description: 'RFC 6901 JSON Pointer into the request body, for example
+
+            `/signers/0/email` or `/container/files/2/content`.
+
+            '
+        detail:
+          type: string
+      required:
+      - pointer
+      - detail
+    Problem:
+      type: object
+      description: RFC 9457.
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        errors:
+          type: array
+          description: 'Present on `validation-failed`, and on the single-fault problems
+
+            that name a field. Request-body validation collects rather than
+
+            failing fast, so a caller who got three fields wrong learns all
+
+            three from one response.
+
+            '
+          items:
+            $ref: '#/components/schemas/ProblemFieldError'
+        recoveryUrl:
+          type: string
+          format: uri-reference
+          description: 'Present on the payment-required refusal when a web page exists
+
+            that fixes it: the tenant''s payment setup, reached with an
+
+            ordinary browser login. Show it to your operator; it is not an
+
+            API endpoint.
+
+            '
+    SigningStatus:
+      type: string
+      enum:
+      - pending
+      - completed
+      - declined
+      - cancelled
+      - expired
+      - failed
+      description: '`pending` - at least one signer can still sign.
+
+        `completed` - every signer signed.
+
+        `declined` - somebody declined and nobody else can still sign.
+
+        `expired` - the window closed first.
+
+        `cancelled` - you retracted it.
+
+        `failed` - the signing could not be prepared.
+
+        '
+    SignedDocument:
+      type: object
+      description: 'The newest signed output. Absent until somebody signs, except on a
+
+        sandbox simulation, where it describes the unsigned artifact.
+
+        '
+      properties:
+        sha256:
+          type: string
+        bytes:
+          type: integer
+        mimeType:
+          type: string
+        sandbox:
+          type: boolean
+          description: 'Present and true only on a sandbox simulation. The bytes are a
+
+            real file to which no signature was added.
+
+            '
+        signed:
+          type: boolean
+          description: 'Present and false only on a sandbox simulation. Absent on a real
+
+            signing, where the output is signed by definition.
+
+            '
+    SignerStatus:
+      type: string
+      enum:
+      - pending
+      - signed
+      - declined
+      - cancelled
+      - expired
+      - simulated
+      - waiting
+      - recorded
+      description: '`waiting` - a sequential signer whose turn has not come; their
+
+        ceremony link answers 404 until it does.
+
+        `recorded` - a viewer. Never invited, never blocks completion.
+
+        '
+  responses:
+    Problem:
+      description: An RFC 9457 problem document.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: '`Authorization: Bearer <key>`. Keys are provisioned by Tvarka during
+
+        onboarding and shown once. A `tsk_live_` key acts on production; a
+
+        `tsk_test_` key is the sandbox.
+
+
+        The key acts as a named workspace user. If that person''s role is
+
+        revoked, or the workspace is suspended, the key stops working.
+
+        '

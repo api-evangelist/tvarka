@@ -1,0 +1,404 @@
+openapi: 3.2.0
+info:
+  title: Tvarka ATK Validation API
+  version: 1.4.0
+  summary: Lithuanian eID authentication, qualified signing, validation and LTV services.
+  description: 'The canonical ATK API contract. Authentication and signing are card-only: LT ATK physical-reader and NFC ceremonies, under one request, polling, webhook and metering model. Remote methods are not offered here - hosted remote-method ceremonies live in the Tvarka Sign developer API. Start with the five-minute quickstart or use the specialist authentication and signing references.'
+  termsOfService: https://atk.tvarka.pro/docs/lifecycle/
+  contact:
+    name: Tvarka API team
+    url: https://atk.tvarka.pro/docs/access/
+    email: info@tvarka.pro
+  license:
+    name: Proprietary
+    url: https://tvarka.pro/salygos/
+servers:
+- url: https://atk.tvarka.pro/v1
+  description: 'Production. Sandbox runs on the same host - provider credentials issued with
+
+    environment=sandbox get the identical API against test-card material and are never billed.
+
+    '
+security:
+- basicAuth: []
+tags:
+- name: Validation
+  description: Standalone advisory validation of signed artifacts.
+paths:
+  /validation:
+    post:
+      tags:
+      - Validation
+      operationId: validateDocument
+      summary: Validate an existing signed document or container
+      description: 'Paid-tier, Basic-authenticated synchronous service. SiVa backs PAdES/ASiC-E and can return
+
+        `passed`/`failed`. ADOC runs Tvarka''s internal STRUCTURAL inspector, which performs no
+
+        cryptographic verification and therefore never returns `passed` - a structurally sound ADOC
+
+        yields `status: structural`. The verdict is advisory, not a regulatory conclusion. A
+
+        successful service call emits exactly one `atk.validate` event. `Idempotency-Key` makes network
+
+        retries replay the original response without a second event.'
+      security:
+      - basicAuth: []
+      parameters:
+      - $ref: '#/components/parameters/SignIdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignValidationServiceRequest'
+      responses:
+        '200':
+          description: Advisory validation result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignValidationServiceResult'
+        '400':
+          $ref: '#/components/responses/SignBadRequest'
+        '401':
+          $ref: '#/components/responses/SignUnauthorized'
+        '403':
+          $ref: '#/components/responses/SignForbidden'
+        '409':
+          $ref: '#/components/responses/SignConflict'
+        '413':
+          $ref: '#/components/responses/SignTooLarge'
+        '429':
+          $ref: '#/components/responses/SignRateLimited'
+        '503':
+          $ref: '#/components/responses/SignServiceUnavailable'
+components:
+  schemas:
+    SignValidationServiceRequest:
+      type: object
+      required:
+      - format
+      additionalProperties: false
+      oneOf:
+      - required:
+        - document
+        properties:
+          document: {}
+          documentRef: {}
+        not:
+          required:
+          - documentRef
+          properties:
+            documentRef: {}
+      - required:
+        - documentRef
+        properties:
+          documentRef: {}
+          document: {}
+        not:
+          required:
+          - document
+          properties:
+            document: {}
+      properties:
+        format:
+          type: string
+          enum:
+          - pades
+          - asice
+          - adoc
+        filename:
+          type: string
+        mimeType:
+          type: string
+        document:
+          type: string
+          format: byte
+        documentRef:
+          $ref: '#/components/schemas/SignDocumentRef'
+        policy:
+          type: string
+          enum:
+          - qes
+          - aes
+          default: qes
+    SignErrorCode:
+      type: string
+      description: 'The full stable error-code catalog of the ATK API family (auth + sign + services);
+
+        each endpoint returns the subset that applies to it. By HTTP status:
+
+        400 invalid_json, missing_field, invalid_field, invalid_webhook_url, invalid_document_ref.
+
+        401 invalid_basic_credentials, invalid_client_token, client_token_expired,
+
+        operation_token_expired, invalid_download_token.
+
+        403 origin_not_allowed, ip_not_allowed, format_not_allowed, document_ref_host_not_allowed,
+
+        method_not_allowed, tenant_suspended, tier_forbidden.
+
+        404 request_not_found, pairing_not_found, document_not_ready.
+
+        409 request_terminal, operation_token_spent, identity_swap, idempotency_conflict,
+
+        service_in_progress, pairing_not_available, pairing_already_claimed.
+
+        410 pairing_expired. 413 document_too_large.
+
+        422 cert_invalid, untrusted_chain, cert_revoked, cert_expired, not_qualified,
+
+        cert_purpose_mismatch, signature_invalid, document_hash_mismatch, document_size_mismatch.
+
+        429 rate_limited. 500 assembly_failed. 502 document_ref_fetch_failed.
+
+        503 erasure_failed, pairing_service_unavailable, service_unavailable.
+
+        The catalog can grow in minor versions - fall back to HTTP status semantics
+
+        for codes you do not recognize.
+
+        '
+      enum:
+      - invalid_json
+      - missing_field
+      - invalid_field
+      - invalid_webhook_url
+      - invalid_document_ref
+      - invalid_basic_credentials
+      - invalid_client_token
+      - client_token_expired
+      - operation_token_expired
+      - invalid_download_token
+      - origin_not_allowed
+      - ip_not_allowed
+      - format_not_allowed
+      - document_ref_host_not_allowed
+      - method_not_allowed
+      - tenant_suspended
+      - tier_forbidden
+      - request_not_found
+      - pairing_not_found
+      - document_not_ready
+      - request_terminal
+      - operation_token_spent
+      - identity_swap
+      - idempotency_conflict
+      - service_in_progress
+      - pairing_not_available
+      - pairing_already_claimed
+      - pairing_expired
+      - document_too_large
+      - cert_invalid
+      - untrusted_chain
+      - cert_revoked
+      - cert_expired
+      - not_qualified
+      - cert_purpose_mismatch
+      - signature_invalid
+      - document_hash_mismatch
+      - document_size_mismatch
+      - rate_limited
+      - assembly_failed
+      - document_ref_fetch_failed
+      - erasure_failed
+      - pairing_service_unavailable
+      - service_unavailable
+    SignError:
+      type: object
+      required:
+      - error
+      properties:
+        error:
+          $ref: '#/components/schemas/SignErrorBody'
+    SignValidationServiceResult:
+      type: object
+      required:
+      - requestId
+      - status
+      - validation
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          const: done
+        validation:
+          type: object
+          required:
+          - status
+          - level
+          - policy
+          - report
+          properties:
+            status:
+              type: string
+              enum:
+              - passed
+              - failed
+              - structural
+              description: '`passed`/`failed` come from SiVa (pades/asice). ADOC uses the internal
+
+                structural inspector and never returns `passed`; a structurally sound
+
+                container yields `structural`.
+
+                '
+            level:
+              type: string
+            policy:
+              type: string
+              enum:
+              - qes
+              - aes
+            report:
+              type: object
+              additionalProperties: true
+    SignDocumentRef:
+      type: object
+      description: 'Backend-fetched document. Hard SSRF controls apply - HTTPS only, host allow-list, no
+
+        private/loopback/link-local, DNS-rebind protection, size cap enforced pre + mid stream, and the
+
+        fetched bytes are verified against `sha256`. `authorization` is used only for the fetch, never
+
+        logged or persisted.
+
+        '
+      required:
+      - url
+      - sha256
+      - sizeBytes
+      additionalProperties: false
+      properties:
+        url:
+          type: string
+          format: uri
+          pattern: ^https://
+        sha256:
+          type: string
+          pattern: ^[0-9a-fA-F]{64}$
+        sizeBytes:
+          type: integer
+          minimum: 1
+        authorization:
+          type: string
+          maxLength: 2048
+    SignErrorBody:
+      type: object
+      required:
+      - code
+      - message
+      properties:
+        code:
+          $ref: '#/components/schemas/SignErrorCode'
+          description: 'Stable machine code. documentRef failures use `invalid_document_ref`,
+
+            `document_ref_host_not_allowed`, `document_ref_fetch_failed`,
+
+            `document_size_mismatch`, `document_hash_mismatch`, or `document_too_large`.
+
+            '
+        message:
+          type: string
+        requestId:
+          type: string
+          format: uuid
+        retryable:
+          type: boolean
+  responses:
+    SignTooLarge:
+      description: Document exceeds the tenant's max size.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SignError'
+    SignRateLimited:
+      description: Too many requests.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SignError'
+    SignForbidden:
+      description: Format not allowed / origin not allowed / tenant suspended.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SignError'
+    SignServiceUnavailable:
+      description: Validation/TSA/revocation dependency failed transiently; retry with the same Idempotency-Key.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SignError'
+    SignBadRequest:
+      description: Malformed input (e.g. container format without document, hash without raw).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SignError'
+    SignUnauthorized:
+      description: Missing/invalid credentials or client token.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SignError'
+    SignConflict:
+      description: Spent operation token, identity swap, terminal request, or idempotency conflict/in-progress operation.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SignError'
+  parameters:
+    SignIdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: 1-255 visible characters; scoped to provider + service operation.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+      description: 'Provider server-to-server credentials `keyId:keySecret`. Server-to-server only, also gated by the
+
+        provider''s server IP allow-list. Never placed in a browser/mobile client.
+
+        '
+    clientToken:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: 'Short-lived, per-request JWT (`ES256`) minted at request creation, scoped
+
+        `{tenant, requestId, purpose, method, allowedOrigins}`. Safe to hand to a browser/mobile client:
+
+        it cannot create requests, read tenant data, or touch other requests. For browser clients the API
+
+        enforces `Origin` against `allowedOrigins` (rejects cross-origin replay).
+
+        '
+    downloadToken:
+      type: apiKey
+      in: query
+      name: downloadToken
+      description: One-off token returned with a completed sign result, for fetching the signed document.
+externalDocs:
+  description: Quickstart, SDKs, test data, pricing and lifecycle policy
+  url: https://atk.tvarka.pro/docs/
+x-publication:
+  specialistContracts:
+  - https://atk.tvarka.pro/openapi/auth.yaml
+  - https://atk.tvarka.pro/openapi/sign.yaml
+  postmanCollections:
+  - https://atk.tvarka.pro/postman/auth.json
+  - https://atk.tvarka.pro/postman/sign.json

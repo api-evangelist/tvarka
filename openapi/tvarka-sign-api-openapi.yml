@@ -1,1197 +1,860 @@
-openapi: 3.1.0
+openapi: 3.2.0
 info:
-  title: Tvarka Sign API
-  version: 1.2.1
-  x-status: >-
-    Live and publicly reachable at https://sign-api.tvarka.pro since
-    2026-08-27, on both production boxes and behind Cloudflare. The first
-    production tenant was onboarded 2026-08-28 and the launch gate
-    ceremony ran the same day: a production signing ordered through this
-    API was signed with a real eID (Mobile-ID) and validated
-    QUALIFIED_VALID, and webhook delivery was exercised the same day
-    against an external production receiver with the HMAC signature and
-    idempotency key verified on arrival.
-  description: |
-    Machine channel for Tvarka Sign: post a document and a list of signers,
-    and Tvarka runs its ordinary qualified signing ceremony for each of them.
-
-    **What this API is.** Orchestration. The ceremony itself is the shipped
-    Tvarka Sign ceremony a person already uses: the same hosted page, the
-    same signing methods (Lithuanian ID card over NFC in the Tvarka Sign
-    mobile app, Smart-ID and Mobile-ID on the hosted page), the same PIN
-    rules, the same invitation lifecycle. Nothing
-    here signs anything - a signature is always a human act with their own
-    eID, so every endpoint below is about getting a document in front of the
-    right person and finding out what they did.
-
-    **Signature formats.** This orchestration API accepts PDF, appendable
-    ASiC-E containers, and the ADOC family - `.adoc`, `.bedoc`, `.cedoc`,
-    `.gedoc`, `.ggedoc` - for countersigning one that is already signed.
-    A container is signed in place, never converted. MDOC is not accepted
-    for countersigning: its composer writes a first signature only.
-    The complete Tvarka API estate produces every
-    Regulation (EU) 2026/248 Annex I family: PAdES, XAdES, CAdES, JAdES and
-    ASiC. The ATK API is the lower-level card and reader API, including full
-    LT ATK NFC, USB/reader and detached CAdES support. The DD API produces
-    JAdES. See the format matrix in the developer guide before selecting a
-    surface.
-
-    **Deliberate scope.** Tvarka offers simple, advisory signature
-    validation. It does not sell qualified validation and it does not offer
-    an electronic-seal API. Those are product boundaries, not launch gaps.
-
-    **Tenancy and billing.** A tenant is a Tvarka entity with a Sign
-    workspace, and ceremonies are raised in that entity's name, so the
-    counterparty sees who is actually asking. Signatures are billed to that
-    workspace on the ordinary per-signature price ladder; there is no
-    separate API tariff and no subscription.
-
-    **Sandbox.** A `tsk_test_` key opens real ceremonies but is exempt from
-    the funding precondition, and can drive a signing to `completed`,
-    `declined` or `expired` through `/simulate`. A simulated completion is
-    explicitly marked `sandbox_simulation` and returns a real downloadable
-    artifact, so download, hashing and storage can be exercised without a
-    real eID. The sandbox never adds a signature: an unsigned PDF comes back
-    as the caller's own pages with a banner saying it is not signed, and
-    anything posted already signed comes back byte-identical. Every artifact
-    is flagged `sandbox: true`. Tvarka issues no test signatures. A
-    production completion is always a real human ceremony.
+  title: Tvarka ATK Sign API
+  version: 1.4.0
+  summary: Lithuanian eID authentication, qualified signing, validation and LTV services.
+  description: 'The canonical ATK API contract. Authentication and signing are card-only: LT ATK physical-reader and NFC ceremonies, under one request, polling, webhook and metering model. Remote methods are not offered here - hosted remote-method ceremonies live in the Tvarka Sign developer API. Start with the five-minute quickstart or use the specialist authentication and signing references.'
+  termsOfService: https://atk.tvarka.pro/docs/lifecycle/
   contact:
-    name: Tvarka
+    name: Tvarka API team
+    url: https://atk.tvarka.pro/docs/access/
     email: info@tvarka.pro
-    url: https://tvarka.pro
+  license:
+    name: Proprietary
+    url: https://tvarka.pro/salygos/
 servers:
-  - url: https://sign-api.tvarka.pro
-    description: Production and sandbox (selected by the key)
+- url: https://atk.tvarka.pro/v1
+  description: 'Production. Sandbox runs on the same host - provider credentials issued with
 
+    environment=sandbox get the identical API against test-card material and are never billed.
+
+    '
 security:
-  - bearerAuth: []
-
+- basicAuth: []
 tags:
-  - name: Signings
-    description: Create and follow a signing.
-
+- name: Sign
+  description: The QES signing ceremony (`/v1/sign/*`).
 paths:
-  /v1/signings:
-    get:
-      tags: [Signings]
-      operationId: listSignings
-      summary: List signings
+  /sign/requests:
+    post:
+      tags:
+      - Sign
+      operationId: createSignRequest
+      summary: Create a signing request (server-to-server)
+      description: 'HTTP Basic. Provide the document one of three ways - inline `document` (base64), an allow-listed
+
+        `documentRef`, or a bare `hash` (only for `format:"raw"`). Container formats
+
+        (pades/asice/adoc) require exactly one of `document` or `documentRef`. PAdES accepts an unsigned
+
+        or already-signed PDF; ASiC-E/ADOC accept either a PDF (Tvarka constructs a new single-payload
+
+        container) or an existing valid container, which is treated as an opaque whole and receives one
+
+        additional signature without payload or attachment edits. Physical requests return a client
+
+        token; NFC returns a pairing hint.'
+      x-codeSamples:
+      - lang: curl
+        label: Physical reader PAdES
+        source: "curl -u \"$ATK_KEY_ID:$ATK_KEY_SECRET\" https://atk.tvarka.pro/v1/sign/requests \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"format\":\"pades\",\"method\":\"physical\",\"document\":\"<base64-pdf>\"}'\n"
+      - lang: curl
+        label: NFC phone tap PAdES
+        source: "curl -u \"$ATK_KEY_ID:$ATK_KEY_SECRET\" https://atk.tvarka.pro/v1/sign/requests \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"format\":\"pades\",\"method\":\"nfc\",\"document\":\"<base64-pdf>\"}'\n"
+      security:
+      - basicAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignSignRequestCreate'
+            examples:
+              physicalAtk:
+                summary: Primary ATK PAdES method
+                value:
+                  format: pades
+                  method: physical
+                  document: JVBERi0xLjQK
+              nfc:
+                summary: ATK by NFC phone tap
+                value:
+                  format: pades
+                  method: nfc
+                  document: JVBERi0xLjQK
+      responses:
+        '202':
+          description: Request created; awaiting the ATK client authorization.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignSignRequestCreated'
+        '400':
+          $ref: '#/components/responses/SignBadRequest'
+        '401':
+          $ref: '#/components/responses/SignUnauthorized'
+        '403':
+          $ref: '#/components/responses/SignForbidden'
+        '413':
+          $ref: '#/components/responses/SignTooLarge'
+        '429':
+          $ref: '#/components/responses/SignRateLimited'
+        '503':
+          $ref: '#/components/responses/SignServiceUnavailable'
+  /sign/{requestId}/certificate:
+    post:
+      tags:
+      - Sign
+      operationId: submitSignCertificate
+      summary: Submit the card's signing certificate; receive the DTBS
+      description: 'Bearer clientToken. The API validates the certificate (chain, revocation, purpose =
+
+        signing/content-commitment, qualified/QSCD evidence), prepares the format-specific DTBS (for
+
+        PAdES - the SHA-256 CAdES SignedAttributes digest; SHA-256 for both key curves), and returns
+
+        it + `operationToken`. Physical/NFC only.'
+      security:
+      - clientToken: []
       parameters:
-        - name: status
-          in: query
-          schema: { $ref: '#/components/schemas/SigningStatus' }
-        - name: limit
-          in: query
-          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
-        - name: startingAfter
-          in: query
-          schema: { type: string, format: uuid }
-      responses:
-        '429': { $ref: '#/components/responses/Problem' }
-        '200':
-          description: A newest-first page of signings.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/SigningList' }
-        '400': { $ref: '#/components/responses/Problem' }
-        '401': { $ref: '#/components/responses/Problem' }
-    post:
-      tags: [Signings]
-      operationId: createSigning
-      summary: Create a signing
-      description: |
-        Stores the document, opens one ceremony per signer, and returns the
-        ceremony URLs (or emails them, with `delivery: email`).
-
-        All signers sign the same document and are unordered: whoever opens
-        their link first signs first, and each subsequent signer signs the
-        output the previous one produced. Two signers never sign at the same
-        moment - the ceremony serializes them.
+      - $ref: '#/components/parameters/SignRequestId'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateSigningRequest'
+              $ref: '#/components/schemas/SignSignCertificateSubmit'
       responses:
-        '201':
-          description: The signing was created and every signer has a live ceremony.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Signing' }
-        '400': { $ref: '#/components/responses/Problem' }
-        '401': { $ref: '#/components/responses/Problem' }
-        '402':
-          description: |
-            The tenant cannot pay for the ceremony: no payment rail, an
-            overdue invoice, or a tripped usage ceiling. Nothing was
-            created and nobody was invited. `recoveryUrl` names the web
-            page where the tenant can fix it.
-          content:
-            application/problem+json:
-              schema: { $ref: '#/components/schemas/Problem' }
-        '403': { $ref: '#/components/responses/Problem' }
-        '422':
-          description: |
-            A well-formed request for a container that cannot take another
-            signature - unsigned, already finalized, or structurally
-            unsound. Not billed.
-          content:
-            application/problem+json:
-              schema: { $ref: '#/components/schemas/Problem' }
-        '429': { $ref: '#/components/responses/Problem' }
-        '503': { $ref: '#/components/responses/Problem' }
-
-  /v1/signings/{signingId}:
-    get:
-      tags: [Signings]
-      operationId: getSigning
-      summary: Get a signing
-      description: Current state of the signing and each of its signers.
-      parameters: [{ $ref: '#/components/parameters/SigningId' }]
-      responses:
-        '401': { $ref: '#/components/responses/Problem' }
-        '429': { $ref: '#/components/responses/Problem' }
         '200':
-          description: The signing.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Signing' }
-        '404': { $ref: '#/components/responses/Problem' }
-    patch:
-      tags: [Signings]
-      operationId: updateSigning
-      summary: Update a live signing deadline
-      parameters: [{ $ref: '#/components/parameters/SigningId' }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                expiresInDays: { type: integer, minimum: 1, maximum: 30 }
-              required: [expiresInDays]
-              additionalProperties: false
-      responses:
-        '401': { $ref: '#/components/responses/Problem' }
-        '429': { $ref: '#/components/responses/Problem' }
-        '200':
-          description: The updated signing.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Signing' }
-        '400': { $ref: '#/components/responses/Problem' }
-        '404': { $ref: '#/components/responses/Problem' }
-        '409': { $ref: '#/components/responses/Problem' }
-    delete:
-      tags: [Signings]
-      operationId: eraseSigning
-      summary: Erase one signing
-      description: |
-        Cancels a live signing first, then purges captured identity and
-        caller-supplied personal data. For a document uploaded through this
-        API, its bytes and vault record are also deleted. If the MCP server
-        opened the ceremony on a pre-existing vault document, that shared
-        document and its bytes are preserved while the dedicated ceremony is
-        removed. A de-identified audit row remains. Idempotent.
-      parameters: [{ $ref: '#/components/parameters/SigningId' }]
-      responses:
-        '401': { $ref: '#/components/responses/Problem' }
-        '429': { $ref: '#/components/responses/Problem' }
-        '200':
-          description: Erasure result.
+          description: DTBS + operation token.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  signingId: { type: string, format: uuid }
-                  deleted: { type: boolean, const: true }
-                  changed: { type: boolean }
-                required: [signingId, deleted, changed]
-                additionalProperties: false
-        '404': { $ref: '#/components/responses/Problem' }
-        '503': { $ref: '#/components/responses/Problem' }
-
-  /v1/batches:
-    post:
-      tags: [Batches]
-      operationId: createBatch
-      summary: Raise one signing per document for one set of parties
-      description: |
-        A batch is a **grouping, not a single signing act**. Every document
-        keeps its own ceremony and its own signature, because that is what
-        happens: the Lithuanian ID card produces one signature per document,
-        and the external ceremony has no USB door where the product's batch
-        signing lives. This buys one call instead of N and one identifier to
-        poll. It does not buy one PIN for many documents, and nothing here
-        should be read as promising that.
-
-        Creation is atomic: either every signing in the batch is raised, or
-        the error response means none was.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                title: { type: string, maxLength: 255 }
-                documents:
-                  type: array
-                  minItems: 1
-                  maxItems: 20
-                  items:
-                    type: object
-                    properties:
-                      name: { type: string }
-                      content: { type: string, format: byte }
-                      fileToken: { type: string, format: uuid }
-                      flatten: { type: boolean }
-                    required: [name]
-                    additionalProperties: false
-                signers:
-                  type: array
-                  minItems: 1
-                  items: { $ref: '#/components/schemas/SignerRequest' }
-                delivery: { type: string, enum: [link, email] }
-                signingOrder: { type: string, enum: [parallel, sequential] }
-                webhookUrl: { type: string, format: uri }
-                externalId: { type: string, maxLength: 120 }
-                expiresInDays: { type: integer, minimum: 1 }
-                softDeadlineInDays:
-                  type: integer
-                  minimum: 1
-                  description: Applied to every signing the batch raises.
-              required: [title, documents, signers]
-              additionalProperties: false
-      responses:
-        '401': { $ref: '#/components/responses/Problem' }
-        '429': { $ref: '#/components/responses/Problem' }
-        '201':
-          description: The batch and every signing it raised.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Batch' }
-        '400': { $ref: '#/components/responses/Problem' }
-        '402': { $ref: '#/components/responses/Problem' }
-
-  /v1/batches/{batchId}:
-    get:
-      tags: [Batches]
-      operationId: getBatch
-      summary: Poll a batch and every signing in it
-      parameters: [{ $ref: '#/components/parameters/BatchId' }]
-      responses:
-        '401': { $ref: '#/components/responses/Problem' }
-        '429': { $ref: '#/components/responses/Problem' }
-        '200':
-          description: The batch.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Batch' }
-        '404': { $ref: '#/components/responses/Problem' }
-
-  /v1/signings/{signingId}/archive:
-    post:
-      tags: [Signings]
-      operationId: archiveSigning
-      summary: Raise the signed output to a long-term level
-      description: |
-        PDF goes PAdES-B-T to B-LT, ASiC-E goes XAdES-T to XAdES-LT: the
-        certificate chain and fresh revocation evidence are embedded so the
-        signature can still be validated once the signing certificate has
-        expired.
-
-        ADOC is refused by name. ADOC-V1.0 specifies XAdES-T and its
-        validators expect that level, so "upgrading" one would be a
-        conformance risk dressed as a favour.
-
-        Already-archived output comes back unchanged with `upgraded: false`,
-        so calling this twice costs a parse and not a second signature. The
-        pre-archive version is kept - an upgrade adds a version, never
-        replaces one.
-      parameters: [{ $ref: '#/components/parameters/SigningId' }]
-      responses:
-        '401': { $ref: '#/components/responses/Problem' }
-        '429': { $ref: '#/components/responses/Problem' }
-        '200':
-          description: The level now held, and whether this call raised it.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  signingId: { type: string, format: uuid }
-                  level: { type: string, example: PAdES-B-LT }
-                  upgraded: { type: boolean }
-                  document: { $ref: '#/components/schemas/SignedDocument' }
-        '404': { $ref: '#/components/responses/Problem' }
-        '409': { $ref: '#/components/responses/Problem' }
-        '422': { $ref: '#/components/responses/Problem' }
-
-  /v1/files:
-    post:
-      tags: [Files]
-      operationId: uploadFile
-      summary: Store a document once for reuse across signings
-      description: |
-        Returns a `fileToken` a later signing may reference instead of
-        carrying base64 again. The same intake as a posted document, so a
-        file that would be refused inline is refused here rather than at the
-        signing that uses it.
-
-        The bytes are **copied** into each signing that uses the token, never
-        shared by reference: deleting a file, or letting it expire, can never
-        reach backwards into a signing that already used it.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                name: { type: string }
-                content: { type: string, format: byte }
-              required: [name, content]
-              additionalProperties: false
-      responses:
-        '429': { $ref: '#/components/responses/Problem' }
-        '201':
-          description: The stored file.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/StoredFile' }
-        '400': { $ref: '#/components/responses/Problem' }
-        '401': { $ref: '#/components/responses/Problem' }
-
-  /v1/files/{fileToken}:
-    get:
-      tags: [Files]
-      operationId: getFile
-      summary: Inspect a stored file
-      parameters: [{ $ref: '#/components/parameters/FileToken' }]
-      responses:
-        '401': { $ref: '#/components/responses/Problem' }
-        '429': { $ref: '#/components/responses/Problem' }
-        '200':
-          description: The stored file.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/StoredFile' }
-        '404': { $ref: '#/components/responses/Problem' }
-    delete:
-      tags: [Files]
-      operationId: deleteFile
-      summary: Purge a stored file
-      description: |
-        Drops the bytes. Signings that already referenced the token are
-        untouched, because they hold their own copy.
-      parameters: [{ $ref: '#/components/parameters/FileToken' }]
-      responses:
-        '401': { $ref: '#/components/responses/Problem' }
-        '429': { $ref: '#/components/responses/Problem' }
-        '200':
-          description: The file, now purged.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/StoredFile' }
-        '404': { $ref: '#/components/responses/Problem' }
-
-  /v1/signings/{signingId}/comments:
-    get:
-      tags: [Signings]
-      operationId: listComments
-      summary: Read the notes on a signing
-      parameters: [{ $ref: '#/components/parameters/SigningId' }]
-      responses:
-        '401': { $ref: '#/components/responses/Problem' }
-        '429': { $ref: '#/components/responses/Problem' }
-        '200':
-          description: The comment thread, oldest first.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  signingId: { type: string, format: uuid }
-                  comments:
-                    type: array
-                    items: { $ref: '#/components/schemas/Comment' }
-        '404': { $ref: '#/components/responses/Problem' }
-    post:
-      tags: [Signings]
-      operationId: addComment
-      summary: Add a note to a signing
-      description: |
-        Your own thread, for your own audit trail. Comments are **not shown
-        to signers**: the ceremony's copy is platform-controlled, so a
-        signer-visible comment would need a surface that does not exist, and
-        one written in the belief that a signer will read it is worse than
-        none.
-      parameters: [{ $ref: '#/components/parameters/SigningId' }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                body: { type: string, maxLength: 4000 }
-                authorLabel:
-                  type: string
-                  maxLength: 120
-                  description: Your own name for whoever wrote it. Echoed back.
-              required: [body]
-              additionalProperties: false
-      responses:
-        '401': { $ref: '#/components/responses/Problem' }
-        '429': { $ref: '#/components/responses/Problem' }
-        '201':
-          description: The stored comment.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Comment' }
-        '400': { $ref: '#/components/responses/Problem' }
-        '404': { $ref: '#/components/responses/Problem' }
-
-  /v1/erasure:
-    post:
-      tags: [Signings]
-      operationId: eraseSignings
-      summary: Erase terminal signings in bulk
-      description: |
-        Purges the client's terminal signing records and any order-owned
-        uploads. Pre-existing vault documents used through MCP are preserved.
-        In-flight signings are left untouched; erase one directly if
-        cancellation is intended.
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                before: { type: string, format: date-time }
-              additionalProperties: false
-      responses:
-        '401': { $ref: '#/components/responses/Problem' }
-        '429': { $ref: '#/components/responses/Problem' }
-        '200':
-          description: Number purged and number that must be retried.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  purged: { type: integer }
-                  failed: { type: integer }
-                required: [purged, failed]
-                additionalProperties: false
-        '400': { $ref: '#/components/responses/Problem' }
-
-  /v1/signings/{signingId}/cancel:
-    post:
-      tags: [Signings]
-      operationId: cancelSigning
-      summary: Cancel a signing
-      description: |
-        Retracts every invitation that has not been used: the ceremony link
-        dies immediately, and the identity data the ceremony had captured
-        about those signers is erased.
-
-        Signatures already collected are untouched. A qualified signature
-        exists once it is made, and this endpoint does not pretend otherwise
-        - the signed document remains downloadable.
-      parameters: [{ $ref: '#/components/parameters/SigningId' }]
-      responses:
-        '401': { $ref: '#/components/responses/Problem' }
-        '429': { $ref: '#/components/responses/Problem' }
-        '200':
-          description: The signing is cancelled.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Signing' }
-        '404': { $ref: '#/components/responses/Problem' }
+                $ref: '#/components/schemas/SignSignCertificateChallenge'
+        '401':
+          $ref: '#/components/responses/SignUnauthorized'
+        '403':
+          $ref: '#/components/responses/SignForbidden'
+        '404':
+          $ref: '#/components/responses/SignNotFound'
         '409':
-          description: The signing had already ended.
-          content:
-            application/problem+json:
-              schema: { $ref: '#/components/schemas/Problem' }
+          $ref: '#/components/responses/SignConflict'
+        '422':
+          $ref: '#/components/responses/SignUnprocessable'
+  /sign/{requestId}/complete:
+    post:
+      tags:
+      - Sign
+      operationId: completeSign
+      summary: Submit the raw card signature; assemble the container
+      description: 'Bearer clientToken + single-use `operationToken`. Synchronous: the API verifies the signature
 
-  /v1/signings/{signingId}/document:
-    get:
-      tags: [Signings]
-      operationId: downloadSignedDocument
-      summary: Download the signed document
-      description: |
-        The newest signed output. Available as soon as one signer has
-        signed, so a partially signed document can be fetched; the
-        `X-Tvarka-Document-Sha256` header carries its digest. On a sandbox
-        simulation this streams the unsigned artifact instead, marked by an
-        `X-Tvarka-Sandbox` header.
-      parameters: [{ $ref: '#/components/parameters/SigningId' }]
+        against the stored DTBS + cert, assembles + timestamps the AdES container inline, schedules
+
+        async validation, and returns `200 done` with `validation:{status:"pending"}` (or
+
+        `notApplicable` in sandbox/raw, or the internal ADOC verdict). `finalizing` is observable via
+
+        GET only if a crash wedges the request until the reaper releases it. Retry-safe; a transient
+
+        assembly failure returns a retryable 5xx with the operation released; one `atk.sign` charge
+
+        at `done`.'
+      security:
+      - clientToken: []
+      parameters:
+      - $ref: '#/components/parameters/SignRequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignSignCompleteSubmit'
       responses:
-        '401': { $ref: '#/components/responses/Problem' }
-        '429': { $ref: '#/components/responses/Problem' }
         '200':
-          description: The signed document.
-          headers:
-            X-Tvarka-Document-Sha256:
-              schema: { type: string }
-              description: SHA-256 of the returned bytes.
-            X-Tvarka-Sandbox:
-              schema: { type: string }
-              description: |
-                Present only on a sandbox artifact
-                (`simulated-artifact-no-signature`). The bytes carry no
-                signature.
+          description: Done - container assembled + signature verified.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignSignResult'
+        '401':
+          $ref: '#/components/responses/SignUnauthorized'
+        '404':
+          $ref: '#/components/responses/SignNotFound'
+        '409':
+          $ref: '#/components/responses/SignConflict'
+        '422':
+          $ref: '#/components/responses/SignUnprocessable'
+  /sign/{requestId}:
+    get:
+      tags:
+      - Sign
+      operationId: getSignRequest
+      summary: Poll status + validation axis; fetch the result
+      security:
+      - basicAuth: []
+      - clientToken: []
+      parameters:
+      - $ref: '#/components/parameters/SignRequestId'
+      responses:
+        '200':
+          description: Current state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignSignRequestState'
+        '401':
+          $ref: '#/components/responses/SignUnauthorized'
+        '404':
+          $ref: '#/components/responses/SignNotFound'
+  /sign/{requestId}/document:
+    get:
+      tags:
+      - Sign
+      operationId: downloadSignedDocument
+      summary: Download the signed container
+      description: Authorized by the provider's Basic credentials or a `downloadToken` query param.
+      security:
+      - basicAuth: []
+      - downloadToken: []
+      parameters:
+      - $ref: '#/components/parameters/SignRequestId'
+      responses:
+        '200':
+          description: The signed container bytes.
           content:
             application/octet-stream:
-              schema: { type: string, format: binary }
-        '404': { $ref: '#/components/responses/Problem' }
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/SignUnauthorized'
+        '404':
+          $ref: '#/components/responses/SignNotFound'
+  /sign/{requestId}/cancel:
+    post:
+      tags:
+      - Sign
+      operationId: cancelSignRequest
+      summary: Cancel a non-terminal request
+      security:
+      - basicAuth: []
+      - clientToken: []
+      parameters:
+      - $ref: '#/components/parameters/SignRequestId'
+      responses:
+        '200':
+          description: Cancelled.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignSignRequestState'
+        '404':
+          $ref: '#/components/responses/SignNotFound'
         '409':
-          description: Nobody has signed yet.
-          content:
-            application/problem+json:
-              schema: { $ref: '#/components/schemas/Problem' }
-
-  /v1/signings/{signingId}/signers:
-    post:
-      tags: [Signings]
-      operationId: addSigner
-      summary: Add a signer to a live signing
-      description: |
-        On a `sequential` signing the newcomer joins the END of the queue:
-        they come back `waiting`, their link stays dead until their turn,
-        and no delivery goes out before it. Only a parallel signing hands
-        back a live ceremony URL immediately.
-      parameters: [{ $ref: '#/components/parameters/SigningId' }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/SignerRequest' }
-      responses:
-        '401': { $ref: '#/components/responses/Problem' }
-        '429': { $ref: '#/components/responses/Problem' }
-        '201':
-          description: The signer and their ceremony.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Signer' }
-        '400': { $ref: '#/components/responses/Problem' }
-        '402': { $ref: '#/components/responses/Problem' }
-        '404': { $ref: '#/components/responses/Problem' }
-        '409': { $ref: '#/components/responses/Problem' }
-
-  /v1/signings/{signingId}/signers/{signerId}:
-    patch:
-      tags: [Signings]
-      operationId: updateSignerMethods
-      summary: Update a pending signer's allowed methods
+          $ref: '#/components/responses/SignConflict'
+  /sign/{requestId}/pairing:
+    get:
+      tags:
+      - Sign
+      operationId: getSignPairing
+      summary: Rotate and return the NFC pairing token for a sign request
+      security:
+      - basicAuth: []
       parameters:
-        - { $ref: '#/components/parameters/SigningId' }
-        - { $ref: '#/components/parameters/SignerId' }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                methods:
-                  type: array
-                  minItems: 1
-                  uniqueItems: true
-                  items: { $ref: '#/components/schemas/SigningMethod' }
-              required: [methods]
-              additionalProperties: false
+      - $ref: '#/components/parameters/SignRequestId'
       responses:
-        '401': { $ref: '#/components/responses/Problem' }
-        '429': { $ref: '#/components/responses/Problem' }
         '200':
-          description: The updated signer.
+          description: Newly rotated pairing token and links.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Signer' }
-        '400': { $ref: '#/components/responses/Problem' }
-        '404': { $ref: '#/components/responses/Problem' }
-        '409': { $ref: '#/components/responses/Problem' }
-    delete:
-      tags: [Signings]
-      operationId: removeSigner
-      summary: Remove a pending signer
-      description: Retracts the ceremony link before removing the signer.
-      parameters:
-        - { $ref: '#/components/parameters/SigningId' }
-        - { $ref: '#/components/parameters/SignerId' }
-      responses:
-        '401': { $ref: '#/components/responses/Problem' }
-        '429': { $ref: '#/components/responses/Problem' }
-        '204': { description: The signer was removed. }
-        '404': { $ref: '#/components/responses/Problem' }
-        '409': { $ref: '#/components/responses/Problem' }
-
-  /v1/signings/{signingId}/signers/{signerId}/remind:
-    post:
-      tags: [Signings]
-      operationId: remindSigner
-      summary: Remind one signer
-      description: Re-sends the invitation email. One reminder per signer per hour.
-      parameters:
-        - { $ref: '#/components/parameters/SigningId' }
-        - { $ref: '#/components/parameters/SignerId' }
-      responses:
-        '401': { $ref: '#/components/responses/Problem' }
-        '200':
-          description: The reminder was sent.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Signer' }
-        '404': { $ref: '#/components/responses/Problem' }
-        '409': { $ref: '#/components/responses/Problem' }
-        '429':
-          description: A reminder was sent to this signer less than an hour ago.
-          content:
-            application/problem+json:
-              schema: { $ref: '#/components/schemas/Problem' }
-
-  /v1/signings/{signingId}/simulate:
-    post:
-      tags: [Signings]
-      operationId: simulateSigning
-      summary: Drive a sandbox signing to an outcome
-      description: |
-        Sandbox keys only. Moves a signing to `completed`, `declined` or
-        `expired` so an integrator can exercise each terminal path without
-        waiting. `complete` simulates the lifecycle: signer status is
-        `simulated`, completion mode is `sandbox_simulation`, and no
-        signature is created. It does return a downloadable artifact so the
-        success path is testable, flagged `sandbox: true`. The sandbox adds
-        no signature: an unsigned PDF comes back stamped and unsigned,
-        anything already signed comes back byte-identical.
-      parameters: [{ $ref: '#/components/parameters/SigningId' }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                action:
-                  type: string
-                  enum: [complete, decline, expire]
-                signerEmail:
-                  type: string
-                  format: email
-                  description: Which signer declines. Defaults to the first.
-                reason:
-                  type: string
-              required: [action]
-              additionalProperties: false
-      responses:
-        '401': { $ref: '#/components/responses/Problem' }
-        '429': { $ref: '#/components/responses/Problem' }
-        '200':
-          description: The signing after the simulated outcome.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Signing' }
-        '400': { $ref: '#/components/responses/Problem' }
-        '403':
-          description: The key is a production key.
-          content:
-            application/problem+json:
-              schema: { $ref: '#/components/schemas/Problem' }
-        '404': { $ref: '#/components/responses/Problem' }
+              schema:
+                $ref: '#/components/schemas/SignPairingInfo'
+        '404':
+          $ref: '#/components/responses/SignNotFound'
         '409':
-          description: |
-            The signing is already terminal, so there is no outcome left to
-            simulate.
-          content:
-            application/problem+json:
-              schema: { $ref: '#/components/schemas/Problem' }
-
-webhooks:
-  signingEvent:
-    post:
-      summary: Signing event
-      description: |
-        Sent to `webhookUrl` as a signing progresses. Deliveries carry
-        `X-Tvarka-Signature: sha256=<HMAC-SHA256 of the raw body>` keyed with
-        your webhook secret - verify it before acting - plus
-        `X-Tvarka-Idempotency-Key` and `X-Tvarka-Event`.
-
-        Retried with backoff on 5xx and transport failures. Delivery is a
-        convenience, never the only way to learn an outcome: polling always
-        works, and a failed delivery never changes a signing's state.
-
-        The payload never carries a signer's identity data - no personal
-        code, no certificate subject, no phone number. It echoes the email
-        you supplied and nothing more.
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                event:
-                  type: string
-                  enum:
-                    - signing.signer_signed
-                    - signing.signer_declined
-                    - signing.completed
-                    - signing.declined
-                    - signing.cancelled
-                    - signing.expired
-                    - signing.failed
-                signingId: { type: string, format: uuid }
-                status: { $ref: '#/components/schemas/SigningStatus' }
-                externalId: { type: string }
-                occurredAt: { type: string, format: date-time }
-                completionMode:
-                  type: string
-                  enum: [qes_ceremony, sandbox_simulation]
-                signer:
-                  type: object
-                  properties:
-                    signerId: { type: string, format: uuid }
-                    email: { type: string, format: email }
-                    status: { $ref: '#/components/schemas/SignerStatus' }
-                    declineReason: { type: string }
-                document:
-                  $ref: '#/components/schemas/SignedDocument'
-      responses:
-        '401': { $ref: '#/components/responses/Problem' }
-        '429': { $ref: '#/components/responses/Problem' }
-        '200':
-          description: Acknowledged. Any 2xx stops redelivery.
-
+          $ref: '#/components/responses/SignConflict'
 components:
-  securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      description: |
-        `Authorization: Bearer <key>`. Keys are provisioned by Tvarka during
-        onboarding and shown once. A `tsk_live_` key acts on production; a
-        `tsk_test_` key is the sandbox.
-
-        The key acts as a named workspace user. If that person's role is
-        revoked, or the workspace is suspended, the key stops working.
-
-  parameters:
-    BatchId:
-      name: batchId
-      in: path
-      required: true
-      schema: { type: string, format: uuid }
-    FileToken:
-      name: fileToken
-      in: path
-      required: true
-      schema: { type: string, format: uuid }
-    SigningId:
-      name: signingId
-      in: path
-      required: true
-      schema: { type: string, format: uuid }
-    SignerId:
-      name: signerId
-      in: path
-      required: true
-      schema: { type: string, format: uuid }
-
-  responses:
-    Problem:
-      description: An RFC 9457 problem document.
-      content:
-        application/problem+json:
-          schema: { $ref: '#/components/schemas/Problem' }
-
   schemas:
-    CreateSigningRequest:
-      type: object
-      properties:
-        title:
-          type: string
-          maxLength: 255
-          description: Shown to signers on the ceremony page and in their email.
-        document:
-          type: object
-          properties:
-            name:
-              type: string
-              description: |
-                Filename with extension. The extension selects the family:
-                `.pdf`; `.asice`/`.sce`/`.bdoc` to countersign an existing
-                appendable ASiC-E; `.adoc`/`.bedoc`/`.cedoc`/`.gedoc`/
-                `.ggedoc` to countersign a signed ADOC-family container.
-                For containers the extension only decides that we look
-                inside - the container's own mimetype member decides what
-                it is. `.mdoc` is refused: an MDOC takes a first signature
-                only.
-            content:
-              type: string
-              format: byte
-              description: |
-                Base64-encoded bytes, up to 15 MiB decoded. Provide exactly
-                one of `content` or `fileToken`.
-            fileToken:
-              type: string
-              format: uuid
-              description: |
-                A reusable upload from `POST /v1/files`, referenced instead
-                of carrying the bytes again. The bytes are copied into the
-                signing at creation, so purging the file later never
-                reaches into a signing that already used it. Provide
-                exactly one of `content` or `fileToken`.
-            flatten:
-              type: boolean
-              default: false
-              description: |
-                PDF only. Draw every form field's appearance into page
-                content and drop the AcroForm, so what a reader sees cannot
-                depend on a viewer's form handling. Fails closed: if any
-                widget has no appearance stream Tvarka can draw faithfully,
-                nothing is flattened and the response names those fields.
-                Signing a live AcroForm without this is perfectly valid -
-                the signature still detects any later edit.
-          required: [name]
-          additionalProperties: false
-        container:
-          type: object
-          description: |
-            Compose a NEW container from several files and sign that, instead
-            of posting one finished document. Mutually exclusive with
-            `document`; exactly one of the two is required.
-          properties:
-            format:
-              type: string
-              enum: [asice, adoc]
-              description: |
-                `asice` takes PDFs only. `adoc` is the Lithuanian ADOC-V1.0
-                package and takes `.pdf` and `.xlsx`. The first file is the
-                main document; the rest are appendices.
-            files:
-              type: array
-              minItems: 1
-              maxItems: 20
-              items:
-                type: object
-                properties:
-                  name: { type: string }
-                  content: { type: string, format: byte }
-                required: [name, content]
-                additionalProperties: false
-          required: [format, files]
-          additionalProperties: false
-        signers:
-          type: array
-          minItems: 1
-          maxItems: 20
-          description: |
-            Everyone who must sign. Unordered, and one email may appear
-            once - a person signs a document once.
-          items: { $ref: '#/components/schemas/SignerRequest' }
-        delivery:
-          type: string
-          enum: [link, email]
-          default: link
-          description: |
-            `link` returns a `ceremonyUrl` per signer for you to deliver.
-            `email` has Tvarka email each signer in your entity's name.
-        webhookUrl:
-          type: string
-          format: uri
-          description: Public HTTPS URL for signing events. Optional.
-        externalId:
-          type: string
-          maxLength: 120
-          description: Your own reference, echoed on every response and webhook.
-        signingOrder:
-          type: string
-          enum: [parallel, sequential]
-          default: parallel
-        softDeadlineInDays:
-          type: integer
-          minimum: 1
-          description: |
-            Sets the soft deadline. On the day it passes, every signer who can
-            still sign is reminded once. Independent of `expiresInDays`, which
-            is the hard deadline.
-        expiresInDays:
-          type: integer
-          minimum: 1
-          maximum: 30
-          default: 14
-      required: [title, signers]
-      oneOf:
-        - required: [document]
-        - required: [container]
-      description: |
-        Exactly one of `document` (a finished file) or `container` (several
-        files composed into a new one) is required.
-      additionalProperties: false
+    SignErrorCode:
+      type: string
+      description: 'The full stable error-code catalog of the ATK API family (auth + sign + services);
 
-    SignerRequest:
-      type: object
-      properties:
-        role:
-          type: string
-          enum: [signer, viewer]
-          default: signer
-          description: |
-            A `viewer` is recorded but never invited, never gets a ceremony
-            link, and never holds up completion. Tvarka sends them nothing.
-            At least one signer is required.
-        email: { type: string, format: email }
-        name: { type: string, maxLength: 500 }
-        language:
-          type: string
-          enum: [lt, en]
-          default: lt
-          description: Per signer, for their email and ceremony page.
-        personalCode:
-          type: string
-          pattern: '^[0-9]{11}$'
-          description: |
-            Optional Lithuanian identity lock. Tvarka stores a keyed hash
-            and encrypted value, never returns the code, and refuses a
-            different authenticated signer.
-        methods:
-          type: array
-          minItems: 1
-          uniqueItems: true
-          default: [nfc, smart_id, mobile_id]
-          items: { $ref: '#/components/schemas/SigningMethod' }
-          description: |
-            Per-signer allow-list. `nfc` uses the Tvarka Sign mobile app;
-            Smart-ID and Mobile-ID use the hosted page or mobile app.
-      required: [email]
-      additionalProperties: false
+        each endpoint returns the subset that applies to it. By HTTP status:
 
-    SigningList:
-      type: object
-      properties:
-        data:
-          type: array
-          items: { $ref: '#/components/schemas/Signing' }
-        hasMore: { type: boolean }
-        nextCursor: { type: string, format: uuid, nullable: true }
-      required: [data, hasMore, nextCursor]
-      additionalProperties: false
+        400 invalid_json, missing_field, invalid_field, invalid_webhook_url, invalid_document_ref.
 
-    Signing:
-      type: object
-      properties:
-        signingId: { type: string, format: uuid }
-        status: { $ref: '#/components/schemas/SigningStatus' }
-        title: { type: string }
-        delivery: { type: string, enum: [link, email] }
-        signingOrder:
-          type: string
-          enum: [parallel, sequential]
-          description: |
-            `sequential` releases one signer at a time in the order they were
-            posted. The signers who are waiting hold a ceremony link that
-            answers 404 until their turn, so the ordering is enforced rather
-            than merely unsent. A decline stops the workflow at the
-            decliner's turn: the signing settles `declined` and the signers
-            still waiting are cancelled.
-        softDeadlineAt:
-          type: string
-          format: date-time
-          nullable: true
-          description: |
-            The date the signing is wanted by, as opposed to `expiresAt`,
-            which is the date it dies on. Nothing expires here; it is when the
-            one automatic reminder goes out.
-        externalId: { type: string, nullable: true }
-        createdAt: { type: string, format: date-time }
-        expiresAt: { type: string, format: date-time, nullable: true }
-        completedAt: { type: string, format: date-time, nullable: true }
-        completionMode:
-          type: string
-          enum: [qes_ceremony, sandbox_simulation]
-          nullable: true
-          description: |
-            `qes_ceremony` means human eID signing. `sandbox_simulation`
-            exercises lifecycle/webhook integration and creates no
-            signature; its artifact is flagged `sandbox: true`.
-        erasedAt: { type: string, format: date-time, nullable: true }
-        detail:
-          type: string
-          description: Present when the status needs a sentence of explanation.
-        signers:
-          type: array
-          items: { $ref: '#/components/schemas/Signer' }
-        document: { $ref: '#/components/schemas/SignedDocument' }
-      additionalProperties: false
+        401 invalid_basic_credentials, invalid_client_token, client_token_expired,
 
-    Signer:
-      type: object
-      properties:
-        signerId: { type: string, format: uuid }
-        role:
-          type: string
-          enum: [signer, viewer]
-          description: |
-            A `viewer` is a recorded non-signing party: no invitation is
-            raised, no ceremony link exists, and they never hold up
-            completion. Tvarka sends them nothing - you hold the webhook and
-            the download, and distribute. At least one signer is required.
-        email: { type: string, format: email, nullable: true }
-        name: { type: string, nullable: true }
-        language: { type: string, enum: [lt, en] }
-        status: { $ref: '#/components/schemas/SignerStatus' }
-        ceremonyUrl:
-          type: string
-          format: uri
-          description: |
-            Present only while this signer can still sign. A finished or
-            retracted invitation has no live URL.
-        signedAt: { type: string, format: date-time, nullable: true }
-        declinedAt: { type: string, format: date-time, nullable: true }
-        declineReason: { type: string }
-        methodsAllowed:
-          type: array
-          items: { $ref: '#/components/schemas/SigningMethod' }
-        actualMethod:
-          allOf: [{ $ref: '#/components/schemas/SigningMethod' }]
-          nullable: true
-          description: Present after a real signature; contains no identity data.
-        identityLocked: { type: boolean }
-        identityMatched:
-          type: boolean
-          nullable: true
-          description: True only after a locked signer completes the real ceremony.
-        simulatedAt: { type: string, format: date-time, nullable: true }
-      additionalProperties: false
+        operation_token_expired, invalid_download_token.
 
-    Batch:
-      type: object
-      properties:
-        batchId: { type: string, format: uuid }
-        title: { type: string }
-        externalId: { type: string, nullable: true }
-        createdAt: { type: string, format: date-time }
-        signings:
-          type: array
-          items: { $ref: '#/components/schemas/Signing' }
+        403 origin_not_allowed, ip_not_allowed, format_not_allowed, document_ref_host_not_allowed,
 
-    StoredFile:
+        method_not_allowed, tenant_suspended, tier_forbidden.
+
+        404 request_not_found, pairing_not_found, document_not_ready.
+
+        409 request_terminal, operation_token_spent, identity_swap, idempotency_conflict,
+
+        service_in_progress, pairing_not_available, pairing_already_claimed.
+
+        410 pairing_expired. 413 document_too_large.
+
+        422 cert_invalid, untrusted_chain, cert_revoked, cert_expired, not_qualified,
+
+        cert_purpose_mismatch, signature_invalid, document_hash_mismatch, document_size_mismatch.
+
+        429 rate_limited. 500 assembly_failed. 502 document_ref_fetch_failed.
+
+        503 erasure_failed, pairing_service_unavailable, service_unavailable.
+
+        The catalog can grow in minor versions - fall back to HTTP status semantics
+
+        for codes you do not recognize.
+
+        '
+      enum:
+      - invalid_json
+      - missing_field
+      - invalid_field
+      - invalid_webhook_url
+      - invalid_document_ref
+      - invalid_basic_credentials
+      - invalid_client_token
+      - client_token_expired
+      - operation_token_expired
+      - invalid_download_token
+      - origin_not_allowed
+      - ip_not_allowed
+      - format_not_allowed
+      - document_ref_host_not_allowed
+      - method_not_allowed
+      - tenant_suspended
+      - tier_forbidden
+      - request_not_found
+      - pairing_not_found
+      - document_not_ready
+      - request_terminal
+      - operation_token_spent
+      - identity_swap
+      - idempotency_conflict
+      - service_in_progress
+      - pairing_not_available
+      - pairing_already_claimed
+      - pairing_expired
+      - document_too_large
+      - cert_invalid
+      - untrusted_chain
+      - cert_revoked
+      - cert_expired
+      - not_qualified
+      - cert_purpose_mismatch
+      - signature_invalid
+      - document_hash_mismatch
+      - document_size_mismatch
+      - rate_limited
+      - assembly_failed
+      - document_ref_fetch_failed
+      - erasure_failed
+      - pairing_service_unavailable
+      - service_unavailable
+    SignSignRequestCreated:
       type: object
+      required:
+      - requestId
+      - method
+      - verificationCode
+      - status
+      - expiresAt
+      description: Physical requests return `clientToken`; NFC returns `pairing`.
       properties:
-        fileToken: { type: string, format: uuid }
-        name: { type: string }
-        mediaType: { type: string }
-        sha256: { type: string }
-        bytes: { type: integer }
-        createdAt: { type: string, format: date-time }
+        requestId:
+          type: string
+          format: uuid
+        method:
+          $ref: '#/components/schemas/SignMethod'
+        verificationCode:
+          type: string
+          description: NFC anti-relay confirmation code.
+        clientToken:
+          type: string
+        status:
+          $ref: '#/components/schemas/SignStatus'
         expiresAt:
           type: string
           format: date-time
-          description: |
-            An unreferenced upload is not kept forever just because nobody
-            deleted it. Re-upload after this, or post the bytes inline.
-        usedCount:
-          type: integer
-          description: How many signings have copied these bytes.
-
-    Comment:
+        pairing:
+          allOf:
+          - $ref: '#/components/schemas/SignPairingHint'
+          description: Present only when method == nfc.
+    SignSignCertificateChallenge:
+      type: object
+      required:
+      - requestId
+      - dtbs
+      - dtbsHashAlgOid
+      - operationToken
+      - cert
+      - signing
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        dtbs:
+          type: string
+          format: byte
+          description: Base64 of the exact digest the card signs (e.g. for PAdES, the curve-matched digest of the CAdES SignedAttributes).
+        dtbsHashAlgOid:
+          $ref: '#/components/schemas/SignHashAlgOid'
+        operationToken:
+          type: string
+        verificationCode:
+          type: string
+        cert:
+          type: object
+          properties:
+            subject:
+              $ref: '#/components/schemas/SignCertSubject'
+        signing:
+          type: object
+          properties:
+            format:
+              $ref: '#/components/schemas/SignFormat'
+            signatureEncodingHints:
+              type: string
+              description: Optional hint for how the card signature should be encoded before submission (P1363 vs DER).
+    SignPairingInfo:
+      allOf:
+      - $ref: '#/components/schemas/SignPairingHint'
+      - type: object
+        required:
+        - pairingToken
+        - expiresAt
+        properties:
+          pairingToken:
+            type: string
+          expiresAt:
+            type: string
+            format: date-time
+    SignValidation:
+      type: object
+      description: The advisory validation axis. Independent of `status`. See the two-axes note.
+      required:
+      - status
+      properties:
+        status:
+          type: string
+          enum:
+          - pending
+          - passed
+          - failed
+          - notApplicable
+        level:
+          type: string
+          description: e.g. QUALIFIED_VALID, VALID_NOT_QUALIFIED, INDETERMINATE.
+        report:
+          type: string
+          description: Optional pointer/id to the stored validation report.
+    SignPairingHint:
       type: object
       properties:
-        commentId: { type: string, format: uuid }
-        author: { type: string, enum: [client, tvarka] }
-        authorLabel: { type: string, nullable: true }
-        body: { type: string }
-        createdAt: { type: string, format: date-time }
-
-    SignedDocument:
-      type: object
-      description: |
-        The newest signed output. Absent until somebody signs, except on a
-        sandbox simulation, where it describes the unsigned artifact.
-      properties:
-        sha256: { type: string }
-        bytes: { type: integer }
-        mimeType: { type: string }
-        sandbox:
-          type: boolean
-          description: |
-            Present and true only on a sandbox simulation. The bytes are a
-            real file to which no signature was added.
-        signed:
-          type: boolean
-          description: |
-            Present and false only on a sandbox simulation. Absent on a real
-            signing, where the output is signed by definition.
-
-    SigningStatus:
-      type: string
-      enum: [pending, completed, declined, cancelled, expired, failed]
-      description: |
-        `pending` - at least one signer can still sign.
-        `completed` - every signer signed.
-        `declined` - somebody declined and nobody else can still sign.
-        `expired` - the window closed first.
-        `cancelled` - you retracted it.
-        `failed` - the signing could not be prepared.
-
-    SignerStatus:
+        pairingUrl:
+          type: string
+          format: uri
+          example: https://sign.tvarka.pro/atk-login/#PAIRING_TOKEN
+        deepLink:
+          type: string
+          example: tvarkasign://atk/pair/PAIRING_TOKEN
+        qrPayload:
+          type: string
+          example: https://sign.tvarka.pro/atk-login/#PAIRING_TOKEN
+    SignMethod:
       type: string
       enum:
-        [pending, signed, declined, cancelled, expired, simulated,
-         waiting, recorded]
-      description: |
-        `waiting` - a sequential signer whose turn has not come; their
-        ceremony link answers 404 until it does.
-        `recorded` - a viewer. Never invited, never blocks completion.
-
-    SigningMethod:
+      - physical
+      - nfc
+      example: physical
+      description: physical = desktop reader; nfc = phone tap.
+    SignSignRequestState:
+      type: object
+      required:
+      - requestId
+      - method
+      - status
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        method:
+          $ref: '#/components/schemas/SignMethod'
+        status:
+          $ref: '#/components/schemas/SignStatus'
+        validation:
+          $ref: '#/components/schemas/SignValidation'
+        cert:
+          type: object
+          properties:
+            subject:
+              $ref: '#/components/schemas/SignCertSubject'
+        sig:
+          type: string
+          format: byte
+        sigAlgOid:
+          type: string
+        downloadToken:
+          type: string
+        error:
+          $ref: '#/components/schemas/SignErrorBody'
+    SignSignRequestCreate:
+      description: The ATK card signs every listed format, by physical reader or NFC.
+      oneOf:
+      - title: ATK raw detached CAdES
+        type: object
+        required:
+        - format
+        - method
+        - hash
+        - hashAlgOid
+        additionalProperties: false
+        properties:
+          format:
+            const: raw
+          method:
+            type: string
+            enum:
+            - physical
+            - nfc
+            example: physical
+          hash:
+            type: string
+            format: byte
+          hashAlgOid:
+            $ref: '#/components/schemas/SignHashAlgOid'
+          filename:
+            type: string
+          mimeType:
+            type: string
+          message:
+            type: string
+          externalId:
+            type: string
+          webhookUrl:
+            type: string
+            format: uri
+      - title: ATK PDF or container
+        type: object
+        required:
+        - format
+        - method
+        additionalProperties: false
+        properties:
+          format:
+            enum:
+            - pades
+            - asice
+            - adoc
+          method:
+            type: string
+            enum:
+            - physical
+            - nfc
+            example: physical
+          document:
+            type: string
+            format: byte
+          documentRef:
+            $ref: '#/components/schemas/SignDocumentRef'
+          filename:
+            type: string
+          mimeType:
+            type: string
+          message:
+            type: string
+          externalId:
+            type: string
+          webhookUrl:
+            type: string
+            format: uri
+        oneOf:
+        - required:
+          - document
+          properties:
+            document: {}
+        - required:
+          - documentRef
+          properties:
+            documentRef: {}
+    SignSignatureEncoding:
       type: string
-      enum: [nfc, smart_id, mobile_id]
-      description: |
-        The orchestration methods. For direct LT ATK reader, USB, raw CAdES
-        and lower-level NFC integration, use the ATK API.
-
-    ProblemFieldError:
+      enum:
+      - P1363
+      - DER
+      default: P1363
+      description: Informational - the server auto-detects and accepts either encoding regardless of this field.
+    SignSignCompleteSubmit:
       type: object
-      description: One rejected field.
+      required:
+      - signature
+      - signatureAlgorithm
+      - operationToken
       properties:
-        pointer:
+        signature:
           type: string
-          description: |
-            RFC 6901 JSON Pointer into the request body, for example
-            `/signers/0/email` or `/container/files/2/content`.
-        detail: { type: string }
-      required: [pointer, detail]
+          format: byte
+          description: Base64 raw card signature over `dtbs` (QES key).
+        signatureAlgorithm:
+          $ref: '#/components/schemas/SignSignatureAlgorithm'
+        signatureEncoding:
+          $ref: '#/components/schemas/SignSignatureEncoding'
+        operationToken:
+          type: string
+    SignFormat:
+      type: string
+      enum:
+      - pades
+      - asice
+      - adoc
+      - raw
+      description: 'pades = signed PDF; asice/adoc = XAdES-T containers; raw = a detached CAdES package from
 
-    Problem:
+        a bare hash (no container returned). Container formats require `document` or `documentRef`.
+
+        '
+    SignDocumentRef:
       type: object
-      description: RFC 9457.
+      description: 'Backend-fetched document. Hard SSRF controls apply - HTTPS only, host allow-list, no
+
+        private/loopback/link-local, DNS-rebind protection, size cap enforced pre + mid stream, and the
+
+        fetched bytes are verified against `sha256`. `authorization` is used only for the fetch, never
+
+        logged or persisted.
+
+        '
+      required:
+      - url
+      - sha256
+      - sizeBytes
+      additionalProperties: false
       properties:
-        type: { type: string, format: uri }
-        title: { type: string }
-        status: { type: integer }
-        detail: { type: string }
-        errors:
-          type: array
-          description: |
-            Present on `validation-failed`, and on the single-fault problems
-            that name a field. Request-body validation collects rather than
-            failing fast, so a caller who got three fields wrong learns all
-            three from one response.
-          items: { $ref: '#/components/schemas/ProblemFieldError' }
-        recoveryUrl:
+        url:
           type: string
-          format: uri-reference
-          description: |
-            Present on the payment-required refusal when a web page exists
-            that fixes it: the tenant's payment setup, reached with an
-            ordinary browser login. Show it to your operator; it is not an
-            API endpoint.
+          format: uri
+          pattern: ^https://
+        sha256:
+          type: string
+          pattern: ^[0-9a-fA-F]{64}$
+        sizeBytes:
+          type: integer
+          minimum: 1
+        authorization:
+          type: string
+          maxLength: 2048
+    SignError:
+      type: object
+      required:
+      - error
+      properties:
+        error:
+          $ref: '#/components/schemas/SignErrorBody'
+    SignStatus:
+      type: string
+      description: 'Non-terminal - pending/awaitingCard/awaitingCredentials/finalizing. Terminal success - done.
+
+        Terminal failure - cancelled/timeout/deviceError/pinBlocked/cardRemoved/certInvalid.
+
+        Validation failure is on the `validation` axis, NOT here.
+
+        '
+      enum:
+      - pending
+      - awaitingCard
+      - awaitingCredentials
+      - finalizing
+      - done
+      - cancelled
+      - timeout
+      - deviceError
+      - pinBlocked
+      - cardRemoved
+      - certInvalid
+    SignSignCertificateSubmit:
+      type: object
+      required:
+      - certificate
+      properties:
+        certificate:
+          type: string
+          format: byte
+          description: Base64 DER of the card's signing certificate.
+    SignErrorBody:
+      type: object
+      required:
+      - code
+      - message
+      properties:
+        code:
+          $ref: '#/components/schemas/SignErrorCode'
+          description: 'Stable machine code. documentRef failures use `invalid_document_ref`,
+
+            `document_ref_host_not_allowed`, `document_ref_fetch_failed`,
+
+            `document_size_mismatch`, `document_hash_mismatch`, or `document_too_large`.
+
+            '
+        message:
+          type: string
+        requestId:
+          type: string
+          format: uuid
+        retryable:
+          type: boolean
+    SignCertSubject:
+      type: object
+      properties:
+        serialNumber:
+          type: string
+          example: PNOLT-39001010000
+        givenName:
+          type: string
+        sn:
+          type: string
+        cn:
+          type: string
+        c:
+          type: string
+          example: LT
+    SignSignatureAlgorithm:
+      type: string
+      enum:
+      - ES256
+      - ES384
+    SignSignResult:
+      type: object
+      required:
+      - status
+      - method
+      - validation
+      - cert
+      properties:
+        status:
+          type: string
+          const: done
+        method:
+          $ref: '#/components/schemas/SignMethod'
+        validation:
+          $ref: '#/components/schemas/SignValidation'
+        sig:
+          type: string
+          format: byte
+          description: For `format:"raw"`, the detached signature package. Absent for container formats (download the container instead).
+        sigAlgOid:
+          type: string
+        cert:
+          type: object
+          properties:
+            subject:
+              $ref: '#/components/schemas/SignCertSubject'
+        downloadToken:
+          type: string
+          description: One-off token for GET /sign/{id}/document.
+    SignHashAlgOid:
+      type: string
+      enum:
+      - 2.16.840.1.101.3.4.2.1
+      - 2.16.840.1.101.3.4.2.2
+      description: SHA-256 / SHA-384 OID, curve-matched.
+  responses:
+    SignUnprocessable:
+      description: Cert purpose/chain/revocation/qualified reject, dtbs mismatch, bad signature, doc hash mismatch.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SignError'
+    SignNotFound:
+      description: Unknown request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SignError'
+    SignTooLarge:
+      description: Document exceeds the tenant's max size.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SignError'
+    SignRateLimited:
+      description: Too many requests.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SignError'
+    SignForbidden:
+      description: Format not allowed / origin not allowed / tenant suspended.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SignError'
+    SignServiceUnavailable:
+      description: Validation/TSA/revocation dependency failed transiently; retry with the same Idempotency-Key.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SignError'
+    SignBadRequest:
+      description: Malformed input (e.g. container format without document, hash without raw).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SignError'
+    SignUnauthorized:
+      description: Missing/invalid credentials or client token.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SignError'
+    SignConflict:
+      description: Spent operation token, identity swap, terminal request, or idempotency conflict/in-progress operation.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SignError'
+  parameters:
+    SignRequestId:
+      name: requestId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+      description: 'Provider server-to-server credentials `keyId:keySecret`. Server-to-server only, also gated by the
+
+        provider''s server IP allow-list. Never placed in a browser/mobile client.
+
+        '
+    clientToken:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: 'Short-lived, per-request JWT (`ES256`) minted at request creation, scoped
+
+        `{tenant, requestId, purpose, method, allowedOrigins}`. Safe to hand to a browser/mobile client:
+
+        it cannot create requests, read tenant data, or touch other requests. For browser clients the API
+
+        enforces `Origin` against `allowedOrigins` (rejects cross-origin replay).
+
+        '
+    downloadToken:
+      type: apiKey
+      in: query
+      name: downloadToken
+      description: One-off token returned with a completed sign result, for fetching the signed document.
+externalDocs:
+  description: Quickstart, SDKs, test data, pricing and lifecycle policy
+  url: https://atk.tvarka.pro/docs/
+x-publication:
+  specialistContracts:
+  - https://atk.tvarka.pro/openapi/auth.yaml
+  - https://atk.tvarka.pro/openapi/sign.yaml
+  postmanCollections:
+  - https://atk.tvarka.pro/postman/auth.json
+  - https://atk.tvarka.pro/postman/sign.json

@@ -1,0 +1,721 @@
+openapi: 3.2.0
+info:
+  title: Tvarka ATK Auth API
+  version: 1.4.0
+  summary: Lithuanian eID authentication, qualified signing, validation and LTV services.
+  description: 'The canonical ATK API contract. Authentication and signing are card-only: LT ATK physical-reader and NFC ceremonies, under one request, polling, webhook and metering model. Remote methods are not offered here - hosted remote-method ceremonies live in the Tvarka Sign developer API. Start with the five-minute quickstart or use the specialist authentication and signing references.'
+  termsOfService: https://atk.tvarka.pro/docs/lifecycle/
+  contact:
+    name: Tvarka API team
+    url: https://atk.tvarka.pro/docs/access/
+    email: info@tvarka.pro
+  license:
+    name: Proprietary
+    url: https://tvarka.pro/salygos/
+servers:
+- url: https://atk.tvarka.pro/v1
+  description: 'Production. Sandbox runs on the same host - provider credentials issued with
+
+    environment=sandbox get the identical API against test-card material and are never billed.
+
+    '
+security:
+- basicAuth: []
+tags:
+- name: Auth
+  description: The eID authentication ceremony (`/v1/auth/*`).
+paths:
+  /auth/requests:
+    post:
+      tags:
+      - Auth
+      operationId: createAuthRequest
+      summary: Create an authentication request (server-to-server)
+      description: 'Called by the provider''s backend with HTTP Basic (`keyId:keySecret`). `audience` must be an
+
+        exact origin on the provider''s allow-list. Physical requests return a short-lived `clientToken`;
+
+        NFC requests return a pairing hint.'
+      x-codeSamples:
+      - lang: curl
+        label: Physical reader
+        source: "curl -u \"$ATK_KEY_ID:$ATK_KEY_SECRET\" https://atk.tvarka.pro/v1/auth/requests \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"audience\":\"https://app.example\",\"method\":\"physical\"}'\n"
+      - lang: curl
+        label: NFC phone tap
+        source: "curl -u \"$ATK_KEY_ID:$ATK_KEY_SECRET\" https://atk.tvarka.pro/v1/auth/requests \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"audience\":\"https://app.example\",\"method\":\"nfc\"}'\n"
+      security:
+      - basicAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthAuthRequestCreate'
+            examples:
+              physicalAtk:
+                summary: Primary ATK desktop-reader method
+                value:
+                  audience: https://app.example
+                  method: physical
+              nfc:
+                summary: ATK by NFC phone tap
+                value:
+                  audience: https://app.example
+                  method: nfc
+      responses:
+        '202':
+          description: Request created; awaiting the ATK client authorization.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthAuthRequestCreated'
+        '400':
+          $ref: '#/components/responses/AuthBadRequest'
+        '401':
+          $ref: '#/components/responses/AuthUnauthorized'
+        '403':
+          $ref: '#/components/responses/AuthForbidden'
+        '429':
+          $ref: '#/components/responses/AuthRateLimited'
+        '503':
+          $ref: '#/components/responses/AuthServiceUnavailable'
+  /auth/{requestId}/certificate:
+    post:
+      tags:
+      - Auth
+      operationId: submitAuthCertificate
+      summary: Submit the card's authentication certificate; receive the DTBS + challenge
+      description: 'Called by the client with `Authorization: Bearer `. The API validates the
+
+        certificate (chain, revocation, purpose = authentication, key usage), builds the canonical
+
+        challenge, and returns the exact `dtbs` the card must sign plus a single-use `operationToken`.'
+      security:
+      - clientToken: []
+      parameters:
+      - $ref: '#/components/parameters/AuthRequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthCertificateSubmit'
+      responses:
+        '200':
+          description: DTBS + challenge + operation token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthCertificateChallenge'
+        '401':
+          $ref: '#/components/responses/AuthUnauthorized'
+        '403':
+          $ref: '#/components/responses/AuthForbidden'
+        '404':
+          $ref: '#/components/responses/AuthNotFound'
+        '409':
+          $ref: '#/components/responses/AuthConflict'
+        '422':
+          $ref: '#/components/responses/AuthUnprocessable'
+  /auth/{requestId}/complete:
+    post:
+      tags:
+      - Auth
+      operationId: completeAuth
+      summary: Submit the raw card signature; receive the verified identity
+      description: 'Called by the client with `Authorization: Bearer ` and the single-use
+
+        `operationToken` in the body. The API verifies the signature against the stored `dtbs` and the
+
+        certificate''s public key, enforces the identity-swap guard, and returns the verified identity
+
+        (and the optional `assertion` JWT). Retry-safe: a repeat with the same tuple returns the same
+
+        result; a different signature/cert after the token is claimed is rejected.'
+      security:
+      - clientToken: []
+      parameters:
+      - $ref: '#/components/parameters/AuthRequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthCompleteSubmit'
+      responses:
+        '200':
+          description: Authenticated - verified identity.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthAuthResult'
+        '401':
+          $ref: '#/components/responses/AuthUnauthorized'
+        '403':
+          $ref: '#/components/responses/AuthForbidden'
+        '404':
+          $ref: '#/components/responses/AuthNotFound'
+        '409':
+          $ref: '#/components/responses/AuthConflict'
+        '422':
+          $ref: '#/components/responses/AuthUnprocessable'
+  /auth/{requestId}:
+    get:
+      tags:
+      - Auth
+      operationId: getAuthRequest
+      summary: Poll request status / fetch the result
+      description: Readable with the provider's Basic credentials, or with the request's `clientToken`.
+      security:
+      - basicAuth: []
+      - clientToken: []
+      parameters:
+      - $ref: '#/components/parameters/AuthRequestId'
+      responses:
+        '200':
+          description: Current state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthAuthRequestState'
+        '401':
+          $ref: '#/components/responses/AuthUnauthorized'
+        '404':
+          $ref: '#/components/responses/AuthNotFound'
+  /auth/{requestId}/cancel:
+    post:
+      tags:
+      - Auth
+      operationId: cancelAuthRequest
+      summary: Cancel a non-terminal request
+      security:
+      - basicAuth: []
+      - clientToken: []
+      parameters:
+      - $ref: '#/components/parameters/AuthRequestId'
+      responses:
+        '200':
+          description: Cancelled.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthAuthRequestState'
+        '404':
+          $ref: '#/components/responses/AuthNotFound'
+        '409':
+          $ref: '#/components/responses/AuthConflict'
+components:
+  schemas:
+    AuthSignatureEncoding:
+      type: string
+      enum:
+      - P1363
+      - DER
+      default: P1363
+      description: Raw ECDSA signature encoding. P1363 = fixed-width r||s; DER = SEQUENCE(r, s). Informational - the server auto-detects and accepts either encoding regardless of this field.
+    AuthAuthRequestCreated:
+      type: object
+      required:
+      - requestId
+      - method
+      - verificationCode
+      - status
+      - expiresAt
+      description: Physical requests return `clientToken`; NFC requests return `pairing`.
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        method:
+          $ref: '#/components/schemas/AuthMethod'
+        verificationCode:
+          type: string
+          description: NFC anti-relay confirmation code.
+        clientToken:
+          type: string
+          description: Scoped bearer JWT for physical-card `/certificate` + `/complete`.
+        status:
+          $ref: '#/components/schemas/AuthStatus'
+        expiresAt:
+          type: string
+          format: date-time
+        challengeProfile:
+          type: string
+          const: atk-auth-v1
+        nonce:
+          type: string
+          description: 'Server-minted challenge nonce (see `Challenge`), so the provider backend can
+
+            re-derive `dtbs` and verify `sig` independently - no device relay needed.
+
+            '
+        pairing:
+          allOf:
+          - $ref: '#/components/schemas/AuthPairingHint'
+          description: Present only when method == nfc.
+    AuthMethod:
+      type: string
+      enum:
+      - physical
+      - nfc
+      example: physical
+      description: physical = desktop reader; nfc = phone tap.
+    AuthPairingHint:
+      type: object
+      properties:
+        pairingUrl:
+          type: string
+          format: uri
+          example: https://sign.tvarka.pro/atk-login/#PAIRING_TOKEN
+        deepLink:
+          type: string
+          example: tvarkasign://atk/pair/PAIRING_TOKEN
+        qrPayload:
+          type: string
+          example: https://sign.tvarka.pro/atk-login/#PAIRING_TOKEN
+    AuthErrorCode:
+      type: string
+      description: 'The full stable error-code catalog of the ATK API family (auth + sign + services);
+
+        each endpoint returns the subset that applies to it. By HTTP status:
+
+        400 invalid_json, missing_field, invalid_field, invalid_webhook_url, invalid_document_ref.
+
+        401 invalid_basic_credentials, invalid_client_token, client_token_expired,
+
+        operation_token_expired, invalid_download_token.
+
+        403 origin_not_allowed, ip_not_allowed, format_not_allowed, document_ref_host_not_allowed,
+
+        method_not_allowed, tenant_suspended, tier_forbidden.
+
+        404 request_not_found, pairing_not_found, document_not_ready.
+
+        409 request_terminal, operation_token_spent, identity_swap, idempotency_conflict,
+
+        service_in_progress, pairing_not_available, pairing_already_claimed.
+
+        410 pairing_expired. 413 document_too_large.
+
+        422 cert_invalid, untrusted_chain, cert_revoked, cert_expired, not_qualified,
+
+        cert_purpose_mismatch, signature_invalid, document_hash_mismatch, document_size_mismatch.
+
+        429 rate_limited. 500 assembly_failed. 502 document_ref_fetch_failed.
+
+        503 erasure_failed, pairing_service_unavailable, service_unavailable.
+
+        The catalog can grow in minor versions - fall back to HTTP status semantics
+
+        for codes you do not recognize.
+
+        '
+      enum:
+      - invalid_json
+      - missing_field
+      - invalid_field
+      - invalid_webhook_url
+      - invalid_document_ref
+      - invalid_basic_credentials
+      - invalid_client_token
+      - client_token_expired
+      - operation_token_expired
+      - invalid_download_token
+      - origin_not_allowed
+      - ip_not_allowed
+      - format_not_allowed
+      - document_ref_host_not_allowed
+      - method_not_allowed
+      - tenant_suspended
+      - tier_forbidden
+      - request_not_found
+      - pairing_not_found
+      - document_not_ready
+      - request_terminal
+      - operation_token_spent
+      - identity_swap
+      - idempotency_conflict
+      - service_in_progress
+      - pairing_not_available
+      - pairing_already_claimed
+      - pairing_expired
+      - document_too_large
+      - cert_invalid
+      - untrusted_chain
+      - cert_revoked
+      - cert_expired
+      - not_qualified
+      - cert_purpose_mismatch
+      - signature_invalid
+      - document_hash_mismatch
+      - document_size_mismatch
+      - rate_limited
+      - assembly_failed
+      - document_ref_fetch_failed
+      - erasure_failed
+      - pairing_service_unavailable
+      - service_unavailable
+    AuthSignatureAlgorithm:
+      type: string
+      description: Card-reported JWS-style algorithm.
+      enum:
+      - ES256
+      - ES384
+    AuthChallenge:
+      type: object
+      description: 'Canonical `atk-auth-v1` anti-relay challenge. The server issues `nonce`; `dtbs` returned above =
+
+        `HASH( HASH(utf8(audience_origin)) || HASH(utf8(nonce)) )` with `HASH` matched to the auth-key
+
+        curve (P-256 -> SHA-256, P-384 -> SHA-384). Versioned - future profiles never reinterpret an
+
+        existing `dtbs`. This binding is what a relying party (e.g. ePaslaugos) audits.
+
+        '
+      required:
+      - profile
+      - audience
+      - nonce
+      properties:
+        profile:
+          type: string
+          const: atk-auth-v1
+        audience:
+          type: string
+        nonce:
+          type: string
+          description: Server-issued base64url challenge string (44-128 chars).
+    AuthCertificateSubmit:
+      type: object
+      required:
+      - certificate
+      properties:
+        certificate:
+          type: string
+          format: byte
+          description: Base64 DER of the card's **authentication** certificate.
+    AuthCertSubject:
+      type: object
+      description: Selected subject fields from the certificate. `serialNumber` holds `PNOLT-<personal code>`.
+      properties:
+        serialNumber:
+          type: string
+          example: PNOLT-39001010000
+        givenName:
+          type: string
+        sn:
+          type: string
+          description: Surname.
+        cn:
+          type: string
+        c:
+          type: string
+          example: LT
+    AuthErrorBody:
+      type: object
+      required:
+      - code
+      - message
+      properties:
+        code:
+          $ref: '#/components/schemas/AuthErrorCode'
+        message:
+          type: string
+        requestId:
+          type: string
+          format: uuid
+        retryable:
+          type: boolean
+    AuthCertificateChallenge:
+      type: object
+      required:
+      - requestId
+      - dtbs
+      - dtbsHashAlgOid
+      - operationToken
+      - challenge
+      - cert
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        dtbs:
+          type: string
+          format: byte
+          description: 'Base64 of the exact digest the card must sign (ECDSA prehashed). Built as the `atk-auth-v1`
+
+            construction - see `Challenge`.
+
+            '
+        dtbsHashAlgOid:
+          $ref: '#/components/schemas/AuthHashAlgOid'
+        operationToken:
+          type: string
+          description: Single-use JWT bound to {tenant, requestId, purpose, certFp, dtbsHash}; the nonce is bound indirectly via dtbs. Returned at /complete.
+        verificationCode:
+          type: string
+        challenge:
+          $ref: '#/components/schemas/AuthChallenge'
+        cert:
+          type: object
+          required:
+          - subject
+          description: 'Echoes only the parsed `subject` (the client itself just submitted the DER).
+
+            The certificate DER is returned at `/complete` and on GET once done.
+
+            '
+          properties:
+            subject:
+              $ref: '#/components/schemas/AuthCertSubject'
+    AuthStatus:
+      type: string
+      description: 'Flat request status. Non-terminal - `pending`, `awaitingCard`, `awaitingCredentials`,
+
+        `finalizing`. Terminal success - `done`. Terminal failure -
+
+        `cancelled`/`timeout`/`deviceError`/`pinBlocked`/`cardRemoved`/`certInvalid`.
+
+        `awaitingCredentials` is SDK-reported (CAN/PIN entry is out-of-band).
+
+        '
+      enum:
+      - pending
+      - awaitingCard
+      - awaitingCredentials
+      - finalizing
+      - done
+      - cancelled
+      - timeout
+      - deviceError
+      - pinBlocked
+      - cardRemoved
+      - certInvalid
+    AuthAuthRequestState:
+      type: object
+      required:
+      - requestId
+      - method
+      - status
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        method:
+          $ref: '#/components/schemas/AuthMethod'
+        status:
+          $ref: '#/components/schemas/AuthStatus'
+        nonce:
+          type: string
+          description: Server-minted challenge nonce (see `Challenge`) - enables independent `sig` verification from polling alone.
+        cert:
+          type: object
+          properties:
+            subject:
+              $ref: '#/components/schemas/AuthCertSubject'
+            der:
+              type: string
+              format: byte
+              description: Base64 DER, present once status == done.
+        sig:
+          type: string
+          format: byte
+        assertion:
+          type: string
+        error:
+          $ref: '#/components/schemas/AuthErrorBody'
+    AuthError:
+      type: object
+      required:
+      - error
+      properties:
+        error:
+          $ref: '#/components/schemas/AuthErrorBody'
+    AuthAuthRequestCreate:
+      type: object
+      required:
+      - audience
+      - method
+      additionalProperties: false
+      properties:
+        audience:
+          type: string
+          description: The relying-party origin (must be exactly on the provider's allow-list), e.g. https://www.epaslaugos.lt.
+          example: https://www.epaslaugos.lt
+        method:
+          $ref: '#/components/schemas/AuthMethod'
+        message:
+          type: string
+          description: Optional short message the client may display to the user.
+        externalId:
+          type: string
+          description: Provider's own correlation id (echoed back, deduped).
+        webhookUrl:
+          type: string
+          format: uri
+          description: Optional public HTTPS webhook for the terminal status; private/non-global destinations are rejected.
+    AuthCompleteSubmit:
+      type: object
+      required:
+      - signature
+      - signatureAlgorithm
+      - operationToken
+      properties:
+        signature:
+          type: string
+          format: byte
+          description: Base64 raw card signature over `dtbs` (auth key).
+        signatureAlgorithm:
+          $ref: '#/components/schemas/AuthSignatureAlgorithm'
+        signatureEncoding:
+          $ref: '#/components/schemas/AuthSignatureEncoding'
+        operationToken:
+          type: string
+    AuthAuthResult:
+      type: object
+      required:
+      - status
+      - method
+      - sig
+      - cert
+      properties:
+        status:
+          type: string
+          const: done
+        method:
+          $ref: '#/components/schemas/AuthMethod'
+        sig:
+          type: string
+          format: byte
+          description: 'The raw card signature over the audience-bound challenge, returned so the relying party can
+
+            verify identity independently of `assertion`. Audience-binding prevents cross-RP relay.
+
+            '
+        cert:
+          type: object
+          properties:
+            subject:
+              $ref: '#/components/schemas/AuthCertSubject'
+            der:
+              type: string
+              format: byte
+        assertion:
+          type: string
+          description: 'Optional short-lived Tvarka-signed JWT (ES256), verifiable against the JWKS endpoint. Claims:
+
+            iss=atk.tvarka.pro, sub=<personal code>, aud=<audience>, iat, exp, jti, request_id
+
+            (binds the assertion to this ceremony), given_name, family_name, cert_fp,
+
+            authentication_method, amr. NOT OIDC.
+
+            Optional by contract - integrators may ignore it and verify the raw `sig` themselves.
+
+            '
+    AuthHashAlgOid:
+      type: string
+      description: Digest algorithm OID, curve-matched. SHA-256 = 2.16.840.1.101.3.4.2.1; SHA-384 = 2.16.840.1.101.3.4.2.2.
+      enum:
+      - 2.16.840.1.101.3.4.2.1
+      - 2.16.840.1.101.3.4.2.2
+  responses:
+    AuthConflict:
+      description: State/idempotency conflict (spent operation token, identity swap, terminal request).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AuthError'
+    AuthBadRequest:
+      description: Malformed input.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AuthError'
+    AuthUnauthorized:
+      description: Missing/invalid credentials or client token.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AuthError'
+    AuthRateLimited:
+      description: Too many requests.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AuthError'
+    AuthServiceUnavailable:
+      description: A required backing or erasure service is temporarily unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AuthError'
+    AuthUnprocessable:
+      description: Semantic reject (cert purpose/chain/revocation, dtbs mismatch, bad signature).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AuthError'
+    AuthForbidden:
+      description: Authorized but not permitted (origin/format/tenant).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AuthError'
+    AuthNotFound:
+      description: Unknown request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AuthError'
+  parameters:
+    AuthRequestId:
+      name: requestId
+      in: path
+      required: true
+      description: The `requestId` returned by `POST /auth/requests`.
+      schema:
+        type: string
+        format: uuid
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+      description: 'Provider server-to-server credentials `keyId:keySecret`. Server-to-server only, also gated by the
+
+        provider''s server IP allow-list. Never placed in a browser/mobile client.
+
+        '
+    clientToken:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: 'Short-lived, per-request JWT (`ES256`) minted at request creation, scoped
+
+        `{tenant, requestId, purpose, method, allowedOrigins}`. Safe to hand to a browser/mobile client:
+
+        it cannot create requests, read tenant data, or touch other requests. For browser clients the API
+
+        enforces `Origin` against `allowedOrigins` (rejects cross-origin replay).
+
+        '
+    downloadToken:
+      type: apiKey
+      in: query
+      name: downloadToken
+      description: One-off token returned with a completed sign result, for fetching the signed document.
+externalDocs:
+  description: Quickstart, SDKs, test data, pricing and lifecycle policy
+  url: https://atk.tvarka.pro/docs/
+x-publication:
+  specialistContracts:
+  - https://atk.tvarka.pro/openapi/auth.yaml
+  - https://atk.tvarka.pro/openapi/sign.yaml
+  postmanCollections:
+  - https://atk.tvarka.pro/postman/auth.json
+  - https://atk.tvarka.pro/postman/sign.json
