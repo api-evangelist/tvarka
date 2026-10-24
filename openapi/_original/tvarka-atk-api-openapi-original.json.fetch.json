@@ -1,0 +1,12 @@
+{
+ "url": "https://atk.tvarka.pro/openapi.json",
+ "requested_url": "https://atk.tvarka.pro/openapi.json",
+ "status": 200,
+ "content_type": "application/vnd.oai.openapi+json;version=3.1",
+ "bytes": 89743,
+ "sha256": "2ab888b16069f4e21859de96423e13a0d9aae4674027ef11e21941d65216954c",
+ "fetched_at": "2026-10-19",
+ "fetched_by": "APIEvangelist-Harvest/1.0 (+https://apievangelist.com)",
+ "match": "equivalent",
+ "note": "Re-fetched from the provider by verify-openapi-sources.py; the provider's current document describes the same operations (Jaccard 1.0), but the bytes differ, so the archive is an earlier or reformatted copy."
+}

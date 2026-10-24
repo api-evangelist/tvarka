@@ -10,14 +10,14 @@ artifacts:
     method: derived
     evidence: declared in the artifact
   arazzo/tvarka-atk-api-authenticate-eid-card.yml:
-    method: unknown
-    evidence: no authorship recorded
+    method: derived
+    evidence: Arazzo whose sourceDescriptions are our split specs (../openapi/)
   arazzo/tvarka-atk-api-sign-pades-document.yml:
-    method: unknown
-    evidence: no authorship recorded
+    method: derived
+    evidence: Arazzo whose sourceDescriptions are our split specs (../openapi/)
   arazzo/tvarka-atk-api-timestamp-and-archive.yml:
-    method: unknown
-    evidence: no authorship recorded
+    method: derived
+    evidence: Arazzo whose sourceDescriptions are our split specs (../openapi/)
   asyncapi/tvarka-atk-api-webhooks.yml:
     method: derived
     evidence: declared in the artifact
@@ -34,35 +34,35 @@ artifacts:
     method: searched
     evidence: declared in the artifact
   collections/tvarka-atk-api-auth-api.opencollection.json:
-    method: derived
-    evidence: openapi/tvarka-atk-api-auth-api
+    method: unknown
+    evidence: no authorship recorded
   collections/tvarka-atk-api-auth-api.postman_collection.json:
-    method: derived
-    evidence: openapi/tvarka-atk-api-auth-api
+    method: unknown
+    evidence: no authorship recorded
   collections/tvarka-atk-api-erasure-api.opencollection.json:
-    method: derived
-    evidence: openapi/tvarka-atk-api-erasure-api
+    method: unknown
+    evidence: no authorship recorded
   collections/tvarka-atk-api-erasure-api.postman_collection.json:
-    method: derived
-    evidence: openapi/tvarka-atk-api-erasure-api
+    method: unknown
+    evidence: no authorship recorded
   collections/tvarka-atk-api-ltv-api.opencollection.json:
-    method: derived
-    evidence: openapi/tvarka-atk-api-ltv-api
+    method: unknown
+    evidence: no authorship recorded
   collections/tvarka-atk-api-ltv-api.postman_collection.json:
-    method: derived
-    evidence: openapi/tvarka-atk-api-ltv-api
+    method: unknown
+    evidence: no authorship recorded
   collections/tvarka-atk-api-pairing-api.opencollection.json:
-    method: derived
-    evidence: openapi/tvarka-atk-api-pairing-api
+    method: unknown
+    evidence: no authorship recorded
   collections/tvarka-atk-api-pairing-api.postman_collection.json:
-    method: derived
-    evidence: openapi/tvarka-atk-api-pairing-api
+    method: unknown
+    evidence: no authorship recorded
   collections/tvarka-atk-api-sign-api.opencollection.json:
-    method: derived
-    evidence: openapi/tvarka-atk-api-sign-api
+    method: unknown
+    evidence: no authorship recorded
   collections/tvarka-atk-api-sign-api.postman_collection.json:
-    method: derived
-    evidence: openapi/tvarka-atk-api-sign-api
+    method: unknown
+    evidence: no authorship recorded
   collections/tvarka-atk-api-tvarka-atk-api-api.opencollection.json:
     method: unknown
     evidence: no authorship recorded
@@ -76,17 +76,17 @@ artifacts:
     method: unknown
     evidence: no authorship recorded
   collections/tvarka-atk-api-validation-api.opencollection.json:
-    method: derived
-    evidence: openapi/tvarka-atk-api-validation-api
+    method: unknown
+    evidence: no authorship recorded
   collections/tvarka-atk-api-validation-api.postman_collection.json:
-    method: derived
-    evidence: openapi/tvarka-atk-api-validation-api
+    method: unknown
+    evidence: no authorship recorded
   collections/tvarka-atk-api-well-known-api.opencollection.json:
-    method: derived
-    evidence: openapi/tvarka-atk-api-well-known-api
+    method: unknown
+    evidence: no authorship recorded
   collections/tvarka-atk-api-well-known-api.postman_collection.json:
-    method: derived
-    evidence: openapi/tvarka-atk-api-well-known-api
+    method: unknown
+    evidence: no authorship recorded
   conformance/tvarka-atk-api-conformance.yml:
     method: searched
     evidence: declared in the artifact
@@ -111,43 +111,10 @@ artifacts:
   examples/tvarka-atk-api-examples.yml:
     method: derived
     evidence: declared in the artifact
-  kin/checks-2026-09-05T072335.yml:
-    method: generated
-    evidence: Kin Score snapshot written by score.rb
-  kin/score-2026-08-10T093022.yml:
-    method: generated
-    evidence: Kin Score snapshot written by score.rb
-  kin/score-2026-08-10T111628.yml:
-    method: generated
-    evidence: Kin Score snapshot written by score.rb
-  kin/score-2026-08-11T211707.yml:
-    method: generated
-    evidence: Kin Score snapshot written by score.rb
-  kin/score-2026-08-12T193225.yml:
-    method: generated
-    evidence: Kin Score snapshot written by score.rb
-  kin/score-2026-08-17T064519.yml:
-    method: generated
-    evidence: Kin Score snapshot written by score.rb
-  kin/score-2026-08-19T080027.yml:
-    method: generated
-    evidence: Kin Score snapshot written by score.rb
-  kin/score-2026-08-19T082702.yml:
-    method: generated
-    evidence: Kin Score snapshot written by score.rb
-  kin/score-2026-08-19T114122.yml:
-    method: generated
-    evidence: Kin Score snapshot written by score.rb
-  kin/score-2026-08-20T165047.yml:
-    method: generated
-    evidence: Kin Score snapshot written by score.rb
-  kin/score-2026-08-20T191845.yml:
-    method: generated
-    evidence: Kin Score snapshot written by score.rb
-  kin/score-2026-08-20T205517.yml:
-    method: generated
-    evidence: Kin Score snapshot written by score.rb
-  kin/score-2026-08-21T110057.yml:
+  front-door-ai/2026-09-17.yml:
+    method: unknown
+    evidence: no authorship recorded
+  kin/checks-2026-09-21T233935.yml:
     method: generated
     evidence: Kin Score snapshot written by score.rb
   kin/score-2026-08-24T064859.yml:
@@ -234,6 +201,108 @@ artifacts:
   kin/score-2026-09-05T072335.yml:
     method: generated
     evidence: Kin Score snapshot written by score.rb
+  kin/score-2026-09-05T144739.yml:
+    method: generated
+    evidence: Kin Score snapshot written by score.rb
+  kin/score-2026-09-05T195450.yml:
+    method: generated
+    evidence: Kin Score snapshot written by score.rb
+  kin/score-2026-09-05T211839.yml:
+    method: generated
+    evidence: Kin Score snapshot written by score.rb
+  kin/score-2026-09-06T011047.yml:
+    method: generated
+    evidence: Kin Score snapshot written by score.rb
+  kin/score-2026-09-06T211804.yml:
+    method: generated
+    evidence: Kin Score snapshot written by score.rb
+  kin/score-2026-09-06T224210.yml:
+    method: generated
+    evidence: Kin Score snapshot written by score.rb
+  kin/score-2026-09-07T200636.yml:
+    method: generated
+    evidence: Kin Score snapshot written by score.rb
+  kin/score-2026-09-07T213054.yml:
+    method: generated
+    evidence: Kin Score snapshot written by score.rb
+  kin/score-2026-09-08T214843.yml:
+    method: generated
+    evidence: Kin Score snapshot written by score.rb
+  kin/score-2026-09-08T232836.yml:
+    method: generated
+    evidence: Kin Score snapshot written by score.rb
+  kin/score-2026-09-10T204815.yml:
+    method: generated
+    evidence: Kin Score snapshot written by score.rb
+  kin/score-2026-09-10T222408.yml:
+    method: generated
+    evidence: Kin Score snapshot written by score.rb
+  kin/score-2026-09-12T062655.yml:
+    method: generated
+    evidence: Kin Score snapshot written by score.rb
+  kin/score-2026-09-12T080032.yml:
+    method: generated
+    evidence: Kin Score snapshot written by score.rb
+  kin/score-2026-09-12T204651.yml:
+    method: generated
+    evidence: Kin Score snapshot written by score.rb
+  kin/score-2026-09-12T221936.yml:
+    method: generated
+    evidence: Kin Score snapshot written by score.rb
+  kin/score-2026-09-13T214537.yml:
+    method: generated
+    evidence: Kin Score snapshot written by score.rb
+  kin/score-2026-09-14T064754.yml:
+    method: generated
+    evidence: Kin Score snapshot written by score.rb
+  kin/score-2026-09-14T210656.yml:
+    method: generated
+    evidence: Kin Score snapshot written by score.rb
+  kin/score-2026-09-14T225847.yml:
+    method: generated
+    evidence: Kin Score snapshot written by score.rb
+  kin/score-2026-09-15T211329.yml:
+    method: generated
+    evidence: Kin Score snapshot written by score.rb
+  kin/score-2026-09-15T230249.yml:
+    method: generated
+    evidence: Kin Score snapshot written by score.rb
+  kin/score-2026-09-16T210549.yml:
+    method: generated
+    evidence: Kin Score snapshot written by score.rb
+  kin/score-2026-09-16T225339.yml:
+    method: generated
+    evidence: Kin Score snapshot written by score.rb
+  kin/score-2026-09-17T211151.yml:
+    method: generated
+    evidence: Kin Score snapshot written by score.rb
+  kin/score-2026-09-17T233623.yml:
+    method: generated
+    evidence: Kin Score snapshot written by score.rb
+  kin/score-2026-09-18T205255.yml:
+    method: generated
+    evidence: Kin Score snapshot written by score.rb
+  kin/score-2026-09-18T231945.yml:
+    method: generated
+    evidence: Kin Score snapshot written by score.rb
+  kin/score-2026-09-19T165737.yml:
+    method: generated
+    evidence: Kin Score snapshot written by score.rb
+  kin/score-2026-09-19T193153.yml:
+    method: generated
+    evidence: Kin Score snapshot written by score.rb
+  kin/score-2026-09-20T205903.yml:
+    method: generated
+    evidence: Kin Score snapshot written by score.rb
+  kin/score-2026-09-20T232958.yml:
+    method: generated
+    evidence: Kin Score snapshot written by score.rb
+  kin/score-2026-09-21T211425.yml:
+    method: generated
+    evidence: Kin Score snapshot written by score.rb
+  kin/score-2026-09-21T233935.yml:
+    method: generated
+    evidence: Kin Score snapshot written by score.rb
   lifecycle/tvarka-atk-api-lifecycle.yml:
     method: searched
     evidence: declared in the artifact
@@ -260,46 +329,62 @@ artifacts:
     evidence: no authorship recorded
   openapi/_original/tvarka-atk-api-auth-openapi.yaml:
     method: harvested
-    evidence: fetched from the provider as-is; byte-identical to the source
+    evidence: the same operations as https://atk.tvarka.pro/openapi/auth.yaml (sha256 18d55e90ac60, fetched
+      2026-10-19)
   openapi/_original/tvarka-atk-api-openapi-original.json:
     method: harvested
-    evidence: fetched from the provider as-is; byte-identical to the source
+    evidence: the same operations as https://atk.tvarka.pro/openapi.json (sha256 2ab888b16069, fetched
+      2026-10-19)
   openapi/_original/tvarka-atk-api-sign-openapi.yaml:
     method: harvested
-    evidence: fetched from the provider as-is; byte-identical to the source
+    evidence: the same operations as https://atk.tvarka.pro/openapi/sign.yaml (sha256 e570b0cb8a7f, fetched
+      2026-10-19)
   openapi/_original/tvarka-sign-api-openapi-original.json:
     method: harvested
-    evidence: fetched from the provider as-is; byte-identical to the source
-  openapi/tvarka-atk-api-auth-api-openapi.yml:
+    evidence: found in openapi/_original/; the fetch URL and bytes were not recorded, so byte-identity
+      to the provider's source is unverified
+  openapi/tvarka-auth-api-openapi.yml:
     method: derived
     evidence: paths are a subset of openapi/_original/ (split from the harvested spec)
-  openapi/tvarka-atk-api-erasure-api-openapi.yml:
+  openapi/tvarka-batches-api-openapi.yml:
     method: derived
     evidence: paths are a subset of openapi/_original/ (split from the harvested spec)
-  openapi/tvarka-atk-api-ltv-api-openapi.yml:
+  openapi/tvarka-erasure-api-openapi.yml:
     method: derived
     evidence: paths are a subset of openapi/_original/ (split from the harvested spec)
-  openapi/tvarka-atk-api-pairing-api-openapi.yml:
+  openapi/tvarka-files-api-openapi.yml:
     method: derived
     evidence: paths are a subset of openapi/_original/ (split from the harvested spec)
-  openapi/tvarka-atk-api-sign-api-openapi.yml:
+  openapi/tvarka-ltv-api-openapi.yml:
     method: derived
     evidence: paths are a subset of openapi/_original/ (split from the harvested spec)
-  openapi/tvarka-atk-api-validation-api-openapi.yml:
-    method: derived
-    evidence: paths are a subset of openapi/_original/ (split from the harvested spec)
-  openapi/tvarka-atk-api-well-known-api-openapi.yml:
+  openapi/tvarka-pairing-api-openapi.yml:
     method: derived
     evidence: paths are a subset of openapi/_original/ (split from the harvested spec)
   openapi/tvarka-sign-api-openapi.yml:
     method: derived
     evidence: paths are a subset of openapi/_original/ (split from the harvested spec)
+  openapi/tvarka-signings-api-openapi.yml:
+    method: derived
+    evidence: paths are a subset of openapi/_original/ (split from the harvested spec)
+  openapi/tvarka-tvarka-atk-api-api-openapi.yml:
+    method: unknown
+    evidence: no authorship recorded
+  openapi/tvarka-tvarka-sign-api-api-openapi.yml:
+    method: unknown
+    evidence: no authorship recorded
+  openapi/tvarka-validation-api-openapi.yml:
+    method: derived
+    evidence: paths are a subset of openapi/_original/ (split from the harvested spec)
+  openapi/tvarka-well-known-api-openapi.yml:
+    method: derived
+    evidence: paths are a subset of openapi/_original/ (split from the harvested spec)
   overlays/tvarka-atk-api-openapi-overlay.yaml:
-    method: generated
-    evidence: declared in the artifact
+    method: derived
+    evidence: an API Evangelist overlay (title) over the provider's contract
   overlays/tvarka-sign-api-openapi-overlay.yaml:
-    method: generated
-    evidence: declared in the artifact
+    method: derived
+    evidence: an API Evangelist overlay (title) over the provider's contract
   packages/tvarka-atk-api-packages.yml:
     method: searched
     evidence: declared in the artifact

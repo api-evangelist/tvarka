@@ -430,3 +430,9 @@ x-publication:
   postmanCollections:
   - https://atk.tvarka.pro/postman/auth.json
   - https://atk.tvarka.pro/postman/sign.json
+x-provenance:
+  method: harvested
+  publisher: Tvarka ATK API
+  source: https://atk.tvarka.pro/openapi.json
+  note: split by refine-openapis from the provider's own published document, verified by fetch (openapi/_original/*.fetch.json);
+    stamped by stamp-openapi-provenance.py (roadmap#793)

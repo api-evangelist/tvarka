@@ -1,0 +1,12 @@
+{
+ "url": "https://atk.tvarka.pro/openapi/auth.yaml",
+ "requested_url": "https://atk.tvarka.pro/openapi/auth.yaml",
+ "status": 200,
+ "content_type": "application/yaml; charset=utf-8",
+ "bytes": 32924,
+ "sha256": "18d55e90ac604828c2ab9e473c9aef3f00213ba4d08457d8c13064f354fbd6e1",
+ "fetched_at": "2026-10-19",
+ "fetched_by": "APIEvangelist-Harvest/1.0 (+https://apievangelist.com)",
+ "match": "equivalent",
+ "note": "Re-fetched from the provider by verify-openapi-sources.py; the provider's current document describes the same operations (Jaccard 1.0), but the bytes differ, so the archive is an earlier or reformatted copy."
+}
